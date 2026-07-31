@@ -134,7 +134,6 @@ export const appStorage = atom<AppStorage>(initialAppStorage);
 
 // Point management functions
 export function setPoints(value: number) {
-
     const newState = {
         ...appStorage.get(),
         points: value,
@@ -168,9 +167,7 @@ export function updateInventoryItem(
     const newState = {
         ...currentState,
         inventory: currentState.inventory.map((item) =>
-            item.id === id
-                ? { ...item, ...updates }
-                : item
+            item.id === id ? { ...item, ...updates } : item,
         ),
     };
 
@@ -179,14 +176,11 @@ export function updateInventoryItem(
 }
 
 export function removeInventoryItem(id: string) {
-
     const currentState = appStorage.get();
 
     const newState = {
         ...currentState,
-        inventory: currentState.inventory.filter(
-            (item) => item.id !== id
-        ),
+        inventory: currentState.inventory.filter((item) => item.id !== id),
     };
 
     appStorage.set(newState);
@@ -203,23 +197,17 @@ export function canAffordItem(itemId: string): boolean {
 // Helper to purchase an item
 export function purchaseItem(itemId: string) {
     const currentState = appStorage.get();
-    const item = currentState.inventory.find(
-        (item) => item.id === itemId
-    );
+    const item = currentState.inventory.find((item) => item.id === itemId);
 
     if (!item || !canAffordItem(itemId) || item.quantity <= 0) {
         return false;
     }
 
     const updatedInventory = currentState.inventory.map((i) =>
-        i.id === itemId
-            ? { ...i, quantity: i.quantity - 1 }
-            : i
+        i.id === itemId ? { ...i, quantity: i.quantity - 1 } : i,
     );
 
-    const existingOwned = currentState.ownedItems.find(
-        (i) => i.id === itemId
-    );
+    const existingOwned = currentState.ownedItems.find((i) => i.id === itemId);
 
     let updatedOwned;
 
@@ -230,7 +218,7 @@ export function purchaseItem(itemId: string) {
                       ...i,
                       quantity: i.quantity + 1,
                   }
-                : i
+                : i,
         );
     } else {
         updatedOwned = [
@@ -247,7 +235,9 @@ export function purchaseItem(itemId: string) {
 
     const newState = {
         ...currentState,
-        points: currentState.points - currentState.inventory.find((item) => item.id === itemId).price,
+        points:
+            currentState.points -
+            currentState.inventory.find((item) => item.id === itemId).price,
         inventory: updatedInventory,
         ownedItems: updatedOwned,
     };
@@ -272,10 +262,7 @@ function saveState(state: AppStorage) {
     }
 
     try {
-        window.localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(state)
-        );
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
         // storage unavailable
     }

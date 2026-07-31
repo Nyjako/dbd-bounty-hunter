@@ -1,0 +1,31 @@
+---
+import "../styles/global.css";
+import WantedPoster from "../components/WantedPoster.astro";
+import PointsOverlay from "../components/points_overlay.astro";
+import { url } from "../lib/url";
+---
+
+<html lang="en">
+    <head>
+        <title>The Hunt — Bounty Hunter Challenge</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content="Track every bounty across the Deadlands and spend your points at the Outlaw's General Store." />
+    </head>
+    <body>
+        <nav class="site-nav">
+            <div class="wrap">
+                <a class="brand" href={url("/")}>Bounty<span>Hunter</span>.challenge</a>
+                <ul class="nav-links">
+                    <li><a href={url("/#rules")}>Rules</a></li>
+                    <li><a href={url("/#shop")}>Shop</a></li>
+                    <li><a href={url("/#ladder")}>Ladder</a></li>
+                    <li><a href={url("/hunt")}>The Hunt</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <PointsOverlay />
+        <WantedPoster />
+    </body>
+</html>

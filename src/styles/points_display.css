@@ -1,124 +1,300 @@
+/* ---------- POINTS PILL ---------- */
 points-display {
     position: fixed;
-    top: 20px;
-    right: 20px;
-
-    background: rgba(0, 0, 0, 0.4);
-    color: white;
-
-    padding: 10px 20px;
-    border-radius: 8px;
-
-    font-size: 20px;
+    top: 5px;
+    right: 10px;
     z-index: 900;
 
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    background: rgba(11, 12, 14, 0.9);
+    color: var(--parchment);
+    border: 1px solid var(--ash);
+    border-radius: 20px;
+
+    padding: 10px 18px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+
     user-select: none;
-
-    transition: background 0.2s;
-}
-
-points-display:hover {
-    background: rgba(0, 0, 0, 1);
     cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition:
+        border-color 0.2s ease,
+        transform 0.15s ease;
+}
+points-display::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--rust);
+    box-shadow: 0 0 0 3px rgba(181, 101, 29, 0.2);
+}
+points-display:hover {
+    border-color: var(--rust);
+    transform: translateY(-1px);
 }
 
-/* Hidden by default; JS toggles the "is-open" class to show it */
+/* ---------- STORE MODAL ---------- */
 store-modal {
     display: none;
     z-index: 1000;
 }
-
 store-modal.is-open {
     display: block;
-    z-index: 1000;
 }
 
 store-modal .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.72);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    padding: 24px;
 }
 
 store-modal .modal-content {
     position: relative;
-    background: #fff;
-    color: #111;
-    width: 90%;
-    max-width: 90%;
+    background: var(--fog-2);
+    color: var(--parchment-dim);
+    border: 1px solid var(--ash);
+    width: 100%;
+    max-width: 780px;
     max-height: 85vh;
     overflow-y: auto;
-    border-radius: 8px;
-    padding: 1.5rem 2rem 2rem;
+    border-radius: var(--radius);
+    padding: 40px 36px 32px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7);
+}
+
+store-modal .modal-content h2 {
+    font-family: "Rye", cursive;
+    font-size: 1.7rem;
+    color: var(--parchment);
+    margin-bottom: 6px;
+}
+
+store-modal .modal-content h3 {
+    font-family: "Special Elite", monospace;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--entity);
+    margin: 34px 0 18px;
+}
+store-modal .modal-content h3::before {
+    content: "§ ";
+    color: var(--rust);
 }
 
 store-modal .close-button {
     position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
+    top: 18px;
+    right: 18px;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--ash);
+    background: transparent;
+    color: var(--text-dim);
+    border-radius: 50%;
     cursor: pointer;
+    font-family: "IBM Plex Mono", monospace;
+    transition:
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+store-modal .close-button:hover {
+    border-color: var(--rust);
+    color: var(--rust);
 }
 
+.point-balance {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: "IBM Plex Mono", monospace;
+}
+.point-balance .badge {
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ash-light);
+}
+.point-balance #points-display {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--rust);
+}
+
+.item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+}
+
+.item-card,
+.owned-card {
+    background: var(--fog);
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    padding: 18px;
+}
+.item-card h4,
+.owned-card h4 {
+    font-family: "Inter", sans-serif;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--parchment);
+    margin-bottom: 8px;
+}
+.item-card p,
+.owned-card p {
+    font-size: 0.86rem;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+}
+.item-card > div {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--rust);
+    margin-bottom: 4px;
+}
+.item-stock {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    color: var(--ash-light) !important;
+}
+
+.buy-button {
+    margin-top: 12px;
+    width: 100%;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--blood-bright);
+    background: var(--blood);
+    color: var(--parchment);
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        transform 0.15s ease;
+}
+.buy-button:hover:not(:disabled) {
+    background: var(--blood-bright);
+    transform: translateY(-1px);
+}
+.buy-button:disabled {
+    background: transparent;
+    border-color: var(--ash);
+    color: var(--ash-light);
+    cursor: not-allowed;
+}
+
+#owned-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}
+.owned-card {
+    border-color: var(--entity);
+    background: rgba(60, 92, 83, 0.08);
+}
+.owned-card strong {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: #9fc3b6;
+}
+
+/* ---------- CONFIRM / ALERT MODALS ---------- */
 store-modal .confirmation-modal,
 .low-gold-alert {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.72);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1100;
+    padding: 24px;
 }
-
 store-modal .confirmation-modal.hidden {
     display: none;
 }
 
-.low-gold-alert .alert-content, .confirmation-modal > .alert-content {
-    background: #fff;
-    color: #111;
-    border-radius: 8px;
-    padding: 1.5rem 2rem;
-    max-width: 400px;
-    width: 90%;
+.low-gold-alert .alert-content,
+.confirmation-modal > .alert-content {
+    background: var(--fog-2);
+    color: var(--parchment-dim);
+    border: 1px solid var(--blood);
+    border-radius: var(--radius);
+    padding: 28px 30px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7);
+}
+.alert-content h3 {
+    font-family: "Rye", cursive;
+    font-size: 1.3rem;
+    color: var(--parchment);
+    margin-bottom: 12px;
+}
+.alert-content p {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+}
+.alert-content p b {
+    color: var(--rust);
 }
 
-
-.store-layout {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 20px;
-}
-
-
-.item-grid {
+.modal-actions {
     display: flex;
+    gap: 12px;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 15px;
 }
-
-
-#owned-items {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 15px;
+.modal-actions button,
+.low-gold-alert .close-alert {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 11px 18px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.15s ease;
 }
-
-
-.item-card,
-.owned-card {
-    background: #eee;
-    border-radius: 8px;
-    padding: 15px;
-    width: 300px;
+.confirm-yes,
+.low-gold-alert .close-alert {
+    background: var(--blood);
+    border: 1px solid var(--blood-bright);
+    color: var(--parchment);
 }
-
-
-.owned-card {
-    background: #d8f0d8;
+.confirm-yes:hover,
+.low-gold-alert .close-alert:hover {
+    background: var(--blood-bright);
+    transform: translateY(-1px);
+}
+.confirm-no {
+    background: transparent;
+    border: 1px solid var(--ash);
+    color: var(--parchment-dim);
+}
+.confirm-no:hover {
+    border-color: var(--rust);
+    color: var(--rust);
 }

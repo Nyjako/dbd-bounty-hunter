@@ -1,5 +1,83 @@
-body {
-    font-family: Arial, sans-serif;
-    max-width: 100%;
-    padding: 20px;
+@import url('https://fonts.googleapis.com/css2?family=Rye&family=Special+Elite&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --fog: #0b0c0e;
+  --fog-2: #131417;
+  --parchment: #e9dfc4;
+  --parchment-dim: #d8cba7;
+  --blood: #7a1220;
+  --blood-bright: #9c1a26;
+  --rust: #b5651d;
+  --ash: #4a4d52;
+  --ash-light: #7a7f85;
+  --entity: #3c5c53;
+  --text-dim: #a9a6a0;
+  --radius: 2px;
 }
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+
+html{ scroll-behavior:smooth; }
+
+body{
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(122,18,32,0.12), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(60,92,83,0.10), transparent 60%),
+    var(--fog);
+  color: var(--parchment-dim);
+  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+img, svg{ display:block; max-width:100%; }
+a{ color: inherit; }
+.wrap{ max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+::selection{ background: var(--blood); color: var(--parchment); }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* ---------- NAV (shared with index) ---------- */
+nav.site-nav{
+  position: sticky; top:0; z-index: 50;
+  background: rgba(11,12,14,0.88);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(122,18,32,0.35);
+}
+nav.site-nav .wrap{
+  display:flex; align-items:center; justify-content:space-between;
+  padding-top: 14px; padding-bottom: 14px;
+}
+.brand{
+  font-family:'Rye', cursive; font-size: 1.05rem; letter-spacing: 0.5px;
+  color: var(--parchment);
+  text-decoration:none;
+}
+.brand span{ color: var(--blood-bright); }
+.nav-links{ display:flex; gap: 22px; list-style:none; }
+.nav-links a{
+  text-decoration:none; color: var(--text-dim); font-size: 0.82rem;
+  letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;
+  transition: color 0.2s ease;
+}
+.nav-links a:hover, .nav-links a:focus-visible{ color: var(--rust); }
+.nav-links a:focus-visible{ outline: 1px solid var(--rust); outline-offset: 4px; }
+@media (max-width: 640px){ .nav-links{ display:none; } }
+
+/* ---------- PAGE HEADER (hunt page banner) ---------- */
+.hunt-header{
+  position: relative;
+  padding: 64px 0 44px;
+  border-bottom: 1px solid rgba(122,18,32,0.25);
+  text-align: center;
+}
+.hunt-header .fog-layer{
+  position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(60,92,83,0.10), transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(122,18,32,0.10), transparent 45%);
+}
+.hunt-header .wrap{ position:relative; z-index:1; }

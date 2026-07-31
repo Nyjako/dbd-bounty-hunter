@@ -1,12 +1,437 @@
 ---
-import "../styles/global.css";
-import WantedPoster from "../components/WantedPoster.astro";
-import PointsOverlay from "../components/points_overlay.astro";
+import "../styles/index.css";
+import { url } from "../lib/url";
 ---
 
 <html>
+    <head>
+        <title>The Bounty Hunter Challenge — Dead by Daylight</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    </head>
     <body>
-        <PointsOverlay />
-        <WantedPoster />
+        <nav>
+            <div class="wrap">
+                <a class="brand" href={url("#top")}
+                    >Bounty<span>Hunter</span>.challenge</a
+                >
+                <ul class="nav-links">
+                    <li><a href={url("#goal")}>Goal</a></li>
+                    <li><a href={url("#rules")}>Rules</a></li>
+                    <li><a href={url("#shop")}>Shop</a></li>
+                    <li><a href={url("#ladder")}>Ladder</a></li>
+                    <li><a href={url("#live")}>Live</a></li>
+                    <li><a href={url("/hunt")}>The Hunt</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <header class="hero" id="top">
+            <div class="fog-layer"></div>
+            <div class="wrap">
+                <p class="eyebrow">
+                    A self-made Dead by Daylight challenge run
+                </p>
+                <div class="poster">
+                    <div class="stamp">Active<br />Bounty</div>
+                    <h1>Wanted:<br />every survivor, <em>dead</em> once.</h1>
+                    <p class="lede">
+                        One killer. Zero perks. Zero add-ons. The Bounty Hunter
+                        Challenge starts you at rock bottom and only lets you
+                        climb by putting survivors on the hook — every single
+                        one of them, at least once.
+                    </p>
+                    <p class="byline">
+                        Devised &amp; played by <a
+                            href="https://www.youtube.com/@AlexRussoYT"
+                            target="_blank"
+                            rel="noopener">Alex Russo</a
+                        >
+                    </p>
+                </div>
+                <div class="hero-cta">
+                    <a class="btn btn-primary" href="#rules">Read the rules</a>
+                    <a class="btn btn-ghost" href="#video"
+                        >Watch the pitch video</a
+                    >
+                </div>
+            </div>
+        </header>
+
+        <section id="video">
+            <div class="wrap">
+                <div class="section-head">
+                    <p class="section-tag">Case file, on tape</p>
+                    <h2>Hear it from the hunter</h2>
+                    <p>
+                        Alex breaks down the full challenge — why it exists, how
+                        the bounty system works, and what happens the first time
+                        it goes sideways.
+                    </p>
+                </div>
+                <div class="video-frame">
+                    <iframe
+                        src="https://www.youtube.com/embed/r4qWOwr0h0g"
+                        title="Bounty Hunter Challenge — explainer video"
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
+                </div>
+                <p class="video-caption">
+                    Prefer YouTube directly? <a
+                        href="https://www.youtube.com/watch?v=r4qWOwr0h0g"
+                        target="_blank"
+                        rel="noopener">Open the video →</a
+                    >
+                </p>
+            </div>
+        </section>
+
+        <section id="goal">
+            <div class="wrap">
+                <div class="section-head">
+                    <p class="section-tag">The main goal</p>
+                    <h2>Collect every bounty</h2>
+                </div>
+                <div class="goal-card">
+                    <span class="goal-mark">✕</span>
+                    <p>
+                        The challenge is won the moment <strong
+                            >every survivor in Dead by Daylight has been killed
+                            at least once</strong
+                        > — sacrificed, mori'd, or otherwise removed for good. It
+                        doesn't matter how strong the killer gets along the way; the
+                        run only ends when the last name on the list is crossed off.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="rules">
+            <div class="wrap">
+                <div class="section-head">
+                    <p class="section-tag">Starting conditions</p>
+                    <h2>You begin with nothing</h2>
+                    <p>
+                        No perks. No add-ons. No advantage. Just the weakest
+                        killer in the roster and whatever you can earn from
+                        here.
+                    </p>
+                </div>
+                <div class="start-grid">
+                    <div class="stat-card" data-corner="RANK 0">
+                        <h3>Killer</h3>
+                        <p>
+                            The weakest killer available — think Trapper or
+                            Ghost Face, run completely bare. No offering, no map
+                            pressure, nothing borrowed.
+                        </p>
+                    </div>
+                    <div class="stat-card" data-corner="EMPTY">
+                        <h3>Loadout</h3>
+                        <p>
+                            Four perk slots, zero perks equipped. Every add-on
+                            slot sits open until it's earned back through the
+                            shop.
+                        </p>
+                        <div class="slot-row">
+                            <div class="slot">—</div><div class="slot">
+                                —
+                            </div><div class="slot">—</div><div class="slot">
+                                —
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="wrap">
+                <div class="section-head">
+                    <p class="section-tag">Earning bounty points</p>
+                    <h2>Every kill pays out</h2>
+                    <p>
+                        Each survivor killed awards Bounty Points based on their
+                        rarity tier. Points are the only currency in this run —
+                        there's no other way to gear up.
+                    </p>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr
+                                ><th>Rarity tier</th><th>Example survivor</th
+                                ><th>Bounty payout</th></tr
+                            >
+                        </thead>
+                        <tbody>
+                            <tr
+                                ><td>Common</td><td
+                                    >Kate Denson, Dwight Fairfield, Sable Ward</td
+                                ><td class="pts">+1 pt</td></tr
+                            >
+                            <tr
+                                ><td>Uncommon</td><td
+                                    >Jill Valentine, Ada Wong, Yui Kimura</td
+                                ><td class="pts">+2 pts</td></tr
+                            >
+                            <tr
+                                ><td>Rare</td><td
+                                    >William Bill Overbeck, Rick Grimes, Taurie
+                                    Cain</td
+                                ><td class="pts">+3 pts</td></tr
+                            >
+                            <tr
+                                ><td>Very rare</td><td
+                                    >Alan Wake, Felix Richter, Nicolas Cage</td
+                                ><td class="pts">+5 pts</td></tr
+                            >
+                            <tr
+                                ><td>Exotic</td><td
+                                    >Laurie Strode, The Troupe, Ellen Ripley</td
+                                ><td class="pts">+6 pts</td></tr
+                            >
+                            <tr
+                                ><td>Ultra Rare</td><td
+                                    >Michonne Grimes, Elodie Rakoto, Haddie Kaur</td
+                                ><td class="pts">+10 pts</td></tr
+                            >
+                        </tbody>
+                    </table>
+                </div>
+                <p class="table-note">
+                    Exact tier assignments and values are Alex's call to tune
+                    per season — the table above is the shape of the system, not
+                    a locked ruling.
+                </p>
+                <div class="bonus-note">
+                    <strong>Cosmetic bonus:</strong> if the survivor is wearing a
+                    skin that renames the character — Alan Wake dressed as Saga Anderson,
+                    Jill Valentine as Sheva — that kill pays an extra <strong
+                        >+2 bonus points</strong
+                    >, no matter the base tier.
+                </div>
+            </div>
+        </section>
+
+        <section id="shop">
+            <div class="wrap">
+                <div class="section-head">
+                    <p class="section-tag">Spending the bounty</p>
+                    <h2>The Bounty Shop</h2>
+                    <p>
+                        Points accumulated across matches get spent between
+                        games. This is the only place gear enters the run.
+                    </p>
+                </div>
+                <div class="shop-grid">
+                    <div class="shop-card">
+                        <div class="icon">✦</div>
+                        <h3>Random perks</h3>
+                        <p>
+                            Spend points on a perk pull from a given tier. Tiers
+                            follow Otzdarva's community rankings — cheap pulls
+                            land in the F/D range, and it gets pricier climbing
+                            toward A and S tier.
+                        </p>
+                        <div class="tier-tags">
+                            <span class="tier-tag">F-tier</span><span
+                                class="tier-tag">D-tier</span
+                            ><span class="tier-tag">C-tier</span><span
+                                class="tier-tag">B-tier</span
+                            ><span class="tier-tag">A-tier</span><span
+                                class="tier-tag">S-tier</span
+                            >
+                        </div>
+                    </div>
+                    <div class="shop-card">
+                        <div class="icon">⚒</div>
+                        <h3>Add-on upgrades</h3>
+                        <p>
+                            Unlock add-on slots permanently, and raise their
+                            rarity ceiling — brown, then green, and up — across
+                            every killer in the roster, not just the one
+                            currently in play.
+                        </p>
+                        <div class="tier-tags">
+                            <span class="tier-tag">Brown</span><span
+                                class="tier-tag">Yellow</span
+                            ><span class="tier-tag">Green</span><span
+                                class="tier-tag">Purple</span
+                            ><span class="tier-tag">Pink/Iri</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="ladder">
+            <div class="wrap">
+                <div class="section-head">
+                    <p class="section-tag">Upgrading killers</p>
+                    <h2>Climbing off the bottom rung</h2>
+                    <p>
+                        There are two ways to trade up to a stronger killer —
+                        one is earned, one is bought.
+                    </p>
+                </div>
+                <ol class="ladder">
+                    <li>
+                        <div>
+                            <h3>Free upgrade — win the streak</h3>
+                            <p>
+                                Two matches in a row closed out with a 3-kill or
+                                4-kill result promotes the current killer to the
+                                next one up, no points spent.
+                            </p>
+                            <div class="path-tags">
+                                <span class="path-tag free">free</span>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <h3>Paid upgrade — buy your way out</h3>
+                            <p>
+                                Stuck on a weak killer with bad matchups? Spend
+                                accumulated Bounty Points to buy the next killer
+                                tier outright and skip the streak requirement.
+                            </p>
+                            <div class="path-tags">
+                                <span class="path-tag paid">paid</span>
+                            </div>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="live">
+            <div class="wrap">
+                <div class="section-head">
+                    <p class="section-tag">Follow the hunt</p>
+                    <h2>Watch it unfold</h2>
+                </div>
+                <div class="live-grid">
+                    <a
+                        class="live-card"
+                        href="https://www.twitch.tv/aleexrusso"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        <div class="platform">
+                            <span class="dot live"></span>Twitch
+                        </div>
+                        <h3>aleexrusso</h3>
+                        <p>
+                            Live runs, close calls, and the moments a bounty
+                            almost slips away. Drop in while the challenge is
+                            being played.
+                        </p>
+                    </a>
+                    <a
+                        class="live-card"
+                        href="https://www.youtube.com/@AlexRussoYT"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        <div class="platform">
+                            <span class="dot"></span>YouTube
+                        </div>
+                        <h3>@AlexRussoYT</h3>
+                        <p>
+                            VODs, highlights, and the full breakdown videos for
+                            the challenge and whatever comes after it.
+                        </p>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="wrap">
+                <div class="section-head">
+                    <p class="section-tag">Behind the site</p>
+                    <h2>Tech loadout</h2>
+                </div>
+                <div class="tech-card">
+                    <div class="tech-top">
+                        <span class="astro-badge">⚡ Built with Astro</span>
+                        <span class="no-react-badge">useState() not found</span>
+                    </div>
+                    <p>
+                        This page is <strong>vanilla HTML, CSS, and JS</strong>,
+                        with Astro doing the boring bundling work in the
+                        background. No virtual DOM, no component tree to
+                        reconcile, no 200 KB of framework runtime just to render
+                        a table of survivor points.
+                    </p>
+                    <p>
+                        Turns out the actual DOM was always right there, taking
+                        calls — <a
+                            class="tech-link"
+                            href="https://www.codetinkerer.com/2024/01/04/forget-virtual-dom-rediscovering-vanilla-dom.html"
+                            target="_blank"
+                            rel="noopener"
+                            >someone else already made the case for it →</a
+                        >
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="wrap">
+                <div class="footer-grid">
+                    <div class="footer-brand">
+                        Bounty<span style="color: var(--blood-bright)"
+                            >Hunter</span
+                        >.challenge
+                        <p>
+                            A community-made Dead by Daylight challenge by Alex
+                            Russo. Not affiliated with Behaviour Interactive.
+                        </p>
+                    </div>
+                    <div class="footer-links">
+                        <div class="footer-col">
+                            <h4>Watch</h4>
+                            <a
+                                href="https://www.youtube.com/watch?v=r4qWOwr0h0g"
+                                target="_blank"
+                                rel="noopener">Explainer video</a
+                            >
+                            <a
+                                href="https://www.youtube.com/@AlexRussoYT"
+                                target="_blank"
+                                rel="noopener">YouTube</a
+                            >
+                            <a
+                                href="https://www.twitch.tv/aleexrusso"
+                                target="_blank"
+                                rel="noopener">Twitch</a
+                            >
+                        </div>
+                        <div class="footer-col">
+                            <h4>Site</h4>
+                            <a
+                                href="https://github.com/Nyjako"
+                                target="_blank"
+                                rel="noopener">Author — Nyjako</a
+                            >
+                            <a
+                                href="https://github.com/Nyjako/dbd-bounty-hunter"
+                                target="_blank"
+                                rel="noopener">Repo</a
+                            >
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-note">
+                    Built with Astro · no survivors were permanently harmed,
+                    they respawn next trial.
+                </div>
+            </div>
+        </footer>
     </body>
 </html>
