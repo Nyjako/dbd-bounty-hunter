@@ -7,7 +7,7 @@ $(things_to_generate):
 	node scripts/generate_map.cjs
 
 clean:
-	rm $(things_to_generate)
+	rm -f -- $(things_to_generate)
 
 re: clean
 	$(MAKE) all
