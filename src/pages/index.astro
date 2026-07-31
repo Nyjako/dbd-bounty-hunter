@@ -10,21 +10,3 @@ import PointsOverlay from "../components/points_overlay.astro";
         <WantedPoster />
     </body>
 </html>
-
-<script>
-    const form = document.querySelector<HTMLFormElement>("#name-form");
-    const input = document.querySelector<HTMLInputElement>("#name-input");
-    const greeting = document.querySelector<HTMLDivElement>("#greeting");
-
-    if (!form || !input || !greeting) throw new Error("Some id's were missing")
-
-    form.addEventListener("submit", (event) => {
-        event.preventDefault();
-
-        const name = input.value.trim();
-
-        if (name) {
-            greeting.textContent = `Hello ${name}!`;
-        }
-    });
-</script>

@@ -1,13 +1,91 @@
 ---
 import "../styles/points_display.css";
+
+import { appStorage } from "../stores/points";
+const { points, inventory } = appStorage.get();
 ---
+
+<store-modal>
+    <div class="modal-overlay" aria-hidden="true">
+        <div class="modal-content">
+            <button class="close-button" aria-label="Close modal">X</button>
+            <h2>Outlaw's General Store</h2>
+
+            <!-- Point Balance Display -->
+            <div class="point-balance">
+                <span class="badge">Your Points: </span>
+                <span id="points-display">{points}</span>
+            </div>
+
+            <!-- Inventory Section -->
+            <section class="inventory-section">
+                <h3>Goods for Sale</h3>
+
+                <div class="item-grid">
+                    {inventory.map((item) => (
+                        <div class="item-card" data-item-id={item.id}>
+                            <h4>{item.name}</h4>
+
+                            <p>{item.description}</p>
+
+                            <div>
+                                Cost: {item.price} points
+                            </div>
+
+                            <div class="item-stock">
+                                In stock: {item.quantity}
+                            </div>
+
+                            <button
+                                class="buy-button"
+                                data-id={item.id}
+                                data-cost={item.price}
+                                disabled={item.quantity <= 0}
+                            >
+                                {item.quantity > 0
+                                    ? "Buy This!"
+                                    : "Sold Out"}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+            </section>
+
+
+            <section class="owned-section">
+
+                <h3>Your Collection</h3>
+
+                <div class="owned-grid">
+                    <div id="owned-items">
+                        No items purchased yet.
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Confirmation Modal -->
+            <div class="confirmation-modal hidden">
+                <div class="alert-content">
+                    <h3>Are ya sure, partner?</h3>
+                    <p>You're about to spend <span id="confirm-amount"></span> gold. This is a binding agreement between you and the <b>entity</b>.</p>
+                    <div class="modal-actions">
+                        <button class="confirm-yes">Yeehaw! Take My Gold!</button>
+                        <button class="confirm-no">Nah, I'm Good</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</store-modal>
 
 <points-display>
     Points: <span class="points-value">0</span>
 </points-display>
 
 <script>
-    import { points } from "../stores/points";
+    import { appStorage, purchaseItem, canAffordItem } from "../stores/points.ts";
 
     class PointsDisplay extends HTMLElement {
         unsubscribe?: () => void;
@@ -18,11 +96,19 @@ import "../styles/points_display.css";
             if (!value) return;
 
             // initial value
-            value.textContent = points.get().toString();
+            value.textContent = appStorage.get().points.toString();
+
+            // add click event listener to open store modal
+            this.addEventListener("click", () => {
+                // there is a single store-modal instance rendered on the page;
+                // just show it rather than creating a new (empty) one
+                const modal = document.querySelector("store-modal");
+                (modal as any)?.open?.();
+            });
 
             // update whenever points change
-            this.unsubscribe = points.listen((newValue) => {
-                value.textContent = newValue.toString();
+            this.unsubscribe = appStorage.listen((newValue) => {
+                value.textContent = newValue.points.toString();
             });
         }
 
@@ -32,4 +118,176 @@ import "../styles/points_display.css";
     }
 
     customElements.define("points-display", PointsDisplay);
+
+    customElements.define("store-modal", class extends HTMLElement {
+        unsubscribe?: () => void;
+        confirmationModal: HTMLElement | null = null;
+        currentItemId: string | null = null;
+
+        connectedCallback() {
+            this.confirmationModal = this.querySelector(".confirmation-modal");
+
+            // Initialize point display
+            this.updatePointsDisplay();
+            this.updateOwnedItems();
+
+            // Setup event listeners
+            this.setupItemListeners();
+            this.setupConfirmationHandlers();
+            this.setupCloseHandlers();
+
+            // Keep points display (and this modal, if reused) in sync with the store
+            this.unsubscribe = appStorage.listen(() => {
+                this.updatePointsDisplay();
+                this.updateOwnedItems();
+            });
+
+            // Stay hidden until open() is called (e.g. by clicking the points display)
+        }
+
+        setupItemListeners() {
+            const buttons = this.querySelectorAll<HTMLButtonElement>(".buy-button");
+            buttons.forEach((button) => {
+                button.addEventListener("click", () => {
+                    const id = button.dataset.id;
+                    const cost = parseInt(button.dataset.cost ?? "0", 10);
+                    if (!id) return;
+
+                    this.currentItemId = id;
+                    this.showConfirmationModal(cost);
+                });
+            });
+        }
+
+        showConfirmationModal(cost: number) {
+            const amountDisplay = this.querySelector("#confirm-amount");
+            if (amountDisplay) {
+                amountDisplay.textContent = cost.toString();
+            }
+            this.confirmationModal?.classList.remove("hidden");
+        }
+
+        setupConfirmationHandlers() {
+            const yesBtn = this.querySelector(".confirm-yes");
+            const noBtn = this.querySelector(".confirm-no");
+
+            yesBtn?.addEventListener("click", () => {
+                if (!this.currentItemId) return;
+
+                if (canAffordItem(this.currentItemId)) {
+                    const success = purchaseItem(this.currentItemId);
+                    this.hideConfirmationModal();
+                    if (success) {
+                        alert("Transaction complete! You're now a little richer... or poorer. Depends on your perspective.");
+                        this.refreshItemCard(this.currentItemId);
+                    }
+                } else {
+                    this.hideConfirmationModal();
+                    this.showLowGoldAlert();
+                }
+            });
+
+            noBtn?.addEventListener("click", () => {
+                this.hideConfirmationModal();
+            });
+        }
+
+        setupCloseHandlers() {
+            const closeBtn = this.querySelector(".close-button");
+            const overlay = this.querySelector(".modal-overlay");
+
+            closeBtn?.addEventListener("click", () => this.close());
+
+            // Close when clicking the dark overlay, but not the modal content itself
+            overlay?.addEventListener("click", (e) => {
+                if (e.target === overlay) this.close();
+            });
+        }
+
+        open() {
+            this.classList.add("is-open");
+            this.querySelector(".modal-overlay")?.setAttribute("aria-hidden", "false");
+        }
+
+        close() {
+            this.classList.remove("is-open");
+            this.querySelector(".modal-overlay")?.setAttribute("aria-hidden", "true");
+            // reset any transient state so it starts fresh next time it's opened
+            this.hideConfirmationModal();
+            this.currentItemId = null;
+        }
+
+        hideConfirmationModal() {
+            this.confirmationModal?.classList.add("hidden");
+        }
+
+        showLowGoldAlert() {
+            const modal = document.createElement("div");
+            modal.className = "low-gold-alert";
+            modal.innerHTML = `
+                <div class="alert-content">
+                    <h3>Out of Gold, Partner!</h3>
+                    <p>You don't have enough gold to make this purchase. Go rob a bank or sell your soul for more.</p>
+                    <button class="close-alert">I'll be better... someday</button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const closeBtn = modal.querySelector(".close-alert");
+            closeBtn?.addEventListener("click", () => {
+                modal.remove();
+            });
+        }
+
+        updatePointsDisplay() {
+            const display = this.querySelector("#points-display");
+            if (display) {
+                display.textContent = appStorage.get().points.toString();
+            }
+        }
+
+        refreshItemCard(itemId: string) {
+            const item = appStorage.get().inventory.find((i) => i.id === itemId);
+            const card = this.querySelector<HTMLElement>(`[data-item-id="${itemId}"]`);
+            if (!item || !card) return;
+
+            const stockEl = card.querySelector(".item-stock");
+            const buyBtn = card.querySelector<HTMLButtonElement>(".buy-button");
+
+            if (stockEl) stockEl.textContent = `In stock: ${item.quantity}`;
+            if (buyBtn) {
+                buyBtn.disabled = item.quantity <= 0;
+                buyBtn.textContent = item.quantity > 0 ? "Buy This!" : "Sold Out";
+            }
+        }
+
+        disconnectedCallback() {
+            this.unsubscribe?.();
+            this.hideConfirmationModal();
+        }
+
+        updateOwnedItems() {
+            const container = this.querySelector("#owned-items");
+
+            if (!container) return;
+
+            const owned = appStorage.get().ownedItems;
+
+            if (owned.length === 0) {
+                container.innerHTML =
+                    "No items purchased yet.";
+                return;
+            }
+
+
+            container.innerHTML = owned.map(item => `
+                <div class="owned-card">
+                    <h4>${item.name}</h4>
+                    <p>${item.description}</p>
+                    <strong>Owned: ${item.quantity}</strong>
+                </div>
+            `).join("");
+        }
+    });
 </script>

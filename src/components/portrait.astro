@@ -7,16 +7,14 @@ import { Image } from 'astro:assets';
 
 <wanted-card>
     <div class="wanted-card" id="wanted_card" data-points={points}>
-        <!-- <p class="bounty-value-text rye-regular">REWARD</p>
-        <p class="bounty-value rye-regular">${points}</p> -->
-        <Image class="wanted_character" src={img} alt={name} />
-        <Image class="red-x" src={red_x} alt="X" style="display: none;" loading="eager" />
+        <Image class="wanted_character" src={img} alt={name} loading="lazy" />
+        <Image class="red-x" src={red_x} alt="X" style="display: none;" loading="lazy" />
         <h2 class="survivor-name">{name}</h2>
     </div>
 </wanted-card>
 
 <script>
-    import { addPoints } from "../stores/points";
+    import { addPoints, getWantedCardState, setWantedCardState } from "../stores/points";
 
     class WantedCard extends HTMLElement {
         connectedCallback() {
@@ -25,18 +23,24 @@ import { Image } from 'astro:assets';
 
             if (!card || !redX) throw new Error("Did not find elements");
 
-            let toggled = false;
+            const name = card.querySelector<HTMLHeadingElement>(".survivor-name")?.textContent ?? "";
+            const reward = Number(card.dataset.points);
+
+            let toggled = getWantedCardState(name);
+
+            // Restore state after page load
+            redX.style.display = toggled ? "block" : "none";
 
             card.addEventListener("click", () => {
                 toggled = !toggled;
 
-                const reward = Number(card.dataset.points);
+                setWantedCardState(name, toggled);
 
                 if (toggled) {
-                    redX.style.display = "block"
+                    redX.style.display = "block";
                     addPoints(reward);
                 } else {
-                    redX.style.display = "none"
+                    redX.style.display = "none";
                     addPoints(-reward);
                 }
             });

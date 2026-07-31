@@ -3,22 +3,122 @@ points-display {
     top: 20px;
     right: 20px;
 
-    background: rgba(0, 0, 0, .4);
+    background: rgba(0, 0, 0, 0.4);
     color: white;
 
     padding: 10px 20px;
     border-radius: 8px;
 
     font-size: 20px;
-    z-index: 1000;
+    z-index: 900;
 
     user-select: none;
 
     transition: background 0.2s;
 }
 
-
 points-display:hover {
     background: rgba(0, 0, 0, 1);
     cursor: pointer;
+}
+
+/* Hidden by default; JS toggles the "is-open" class to show it */
+store-modal {
+    display: none;
+    z-index: 1000;
+}
+
+store-modal.is-open {
+    display: block;
+    z-index: 1000;
+}
+
+store-modal .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+store-modal .modal-content {
+    position: relative;
+    background: #fff;
+    color: #111;
+    width: 90%;
+    max-width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: 8px;
+    padding: 1.5rem 2rem 2rem;
+}
+
+store-modal .close-button {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    cursor: pointer;
+}
+
+store-modal .confirmation-modal,
+.low-gold-alert {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+}
+
+store-modal .confirmation-modal.hidden {
+    display: none;
+}
+
+.low-gold-alert .alert-content, .confirmation-modal > .alert-content {
+    background: #fff;
+    color: #111;
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    max-width: 400px;
+    width: 90%;
+}
+
+
+.store-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+
+.item-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+
+
+#owned-items {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+
+
+.item-card,
+.owned-card {
+    background: #eee;
+    border-radius: 8px;
+    padding: 15px;
+    width: 300px;
+}
+
+
+.owned-card {
+    background: #d8f0d8;
 }
