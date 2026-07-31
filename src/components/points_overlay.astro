@@ -1,0 +1,35 @@
+---
+import "../styles/points_display.css";
+---
+
+<points-display>
+    Points: <span class="points-value">0</span>
+</points-display>
+
+<script>
+    import { points } from "../stores/points";
+
+    class PointsDisplay extends HTMLElement {
+        unsubscribe?: () => void;
+
+        connectedCallback() {
+            const value = this.querySelector(".points-value");
+
+            if (!value) return;
+
+            // initial value
+            value.textContent = points.get().toString();
+
+            // update whenever points change
+            this.unsubscribe = points.listen((newValue) => {
+                value.textContent = newValue.toString();
+            });
+        }
+
+        disconnectedCallback() {
+            this.unsubscribe?.();
+        }
+    }
+
+    customElements.define("points-display", PointsDisplay);
+</script>

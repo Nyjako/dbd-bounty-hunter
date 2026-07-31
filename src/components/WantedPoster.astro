@@ -1,0 +1,43 @@
+---
+import Portrait from "../components/portrait.astro";
+import { characters } from "../data/characters";
+import '../styles/character_portrait.css'
+import '../styles/fonts.css';
+import { CHARACTER_TIERS } from "../data/data_storage";
+
+const s_tier_characters_data = CHARACTER_TIERS.S.map(x => { return { name: x, img: characters[x] } });
+const a_tier_characters_data = CHARACTER_TIERS.A.map(x => { return { name: x, img: characters[x] } });
+const b_tier_characters_data = CHARACTER_TIERS.B.map(x => { return { name: x, img: characters[x] } });
+const c_tier_characters_data = CHARACTER_TIERS.C.map(x => { return { name: x, img: characters[x] } });
+const d_tier_characters_data = CHARACTER_TIERS.D.map(x => { return { name: x, img: characters[x] } });
+const e_tier_characters_data = CHARACTER_TIERS.E.map(x => { return { name: x, img: characters[x] } });
+
+---
+
+<section class="wanted-poster">
+    <h1 class="sheriff-heading rye-regular">WANTED</h1>
+    <p class="bounty-text">
+        These survivors have been spotted across the Deadlands
+        <br/>
+        <b>Hunt your targets and earn your bounty!</b>
+    </p>
+
+    <h2 class="tier-name rye-regular">The Final Hunt</h2>
+    <p class="reward rye-regular">Reward: 10 points</p>
+    <div class="poster-grid"> {s_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name}/> ) )} </div>
+    <h2 class="tier-name rye-regular">Worth the Chase</h2>
+    <p class="reward rye-regular">Reward: 6 points</p>
+    <div class="poster-grid"> {a_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name}/> ) )} </div>
+    <h2 class="tier-name rye-regular">Blood Worth Taking</h2>
+    <p class="reward rye-regular">Reward: 5 points</p>
+    <div class="poster-grid"> {b_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name}/> ) )} </div>
+    <h2 class="tier-name rye-regular">Routine Hunts</h2>
+    <p class="reward rye-regular">Reward: 3 points</p>
+    <div class="poster-grid"> {c_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name}/> ) )} </div>
+    <h2 class="tier-name rye-regular">Easy to Find</h2>
+    <p class="reward rye-regular">Reward: 2 points</p>
+    <div class="poster-grid"> {d_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name}/> ) )} </div>
+    <h2 class="tier-name rye-regular">Everyday Prey</h2>
+    <p class="reward rye-regular">Reward: 1 points</p>
+    <div class="poster-grid"> {e_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name}/> ) )} </div>
+</section>

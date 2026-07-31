@@ -22,3 +22,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+/public/icons/CharPortraits
+/public/icons/Perks
+/src/data/characters.ts
+/src/data/perks.ts

@@ -1,0 +1,103 @@
+.wanted_character {
+    filter: grayscale(80%) contrast(120%) sepia(30%) brightness(90%);
+    background: radial-gradient(
+        ellipse at center,
+        rgba(0, 0, 0, 0.3) 0%,
+        transparent 70%
+    );
+    mix-blend-mode: multiply;
+    aspect-ratio: 1 / 1;
+    max-width: 150px;
+    max-height: 150px;
+}
+
+.wanted-poster {
+    background: #fefbd6;
+    padding: 2rem;
+    border: 5px solid #8b4513;
+    box-shadow: 0 0 20px rgba(139, 69, 19, 0.5);
+    text-align: center;
+}
+
+.sheriff-heading {
+    color: #8b0000;
+    font-size: 4rem;
+    padding: 0;
+    margin: 0;
+}
+
+.bounty-text {
+    font-family: "Courier New", monospace;
+    color: #333;
+    margin: 1rem 0;
+}
+
+.poster-grid {
+    display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+}
+
+.wanted-card {
+    background: #f5deb3;
+    border: 3px dashed #8b4513;
+    /*padding: 1rem;*/
+    border-radius: 10px;
+    transition: transform 0.2s;
+    position: relative;
+    margin-top: 1.5rem;
+}
+
+.wanted-card:hover {
+    transform: scale(1.05);
+    user-select: none;
+    cursor: pointer;
+}
+
+.poster-image {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.survivor-name {
+    font-family: "Georgia", serif;
+    color: #333;
+    font-size: 15px;
+    margin: 0.5rem 0;
+}
+
+.bounty-value {
+    margin-top: -30px;
+    font-size: 2rem;
+    color: #d2691e;
+}
+
+.bounty-value-text {
+    margin-top: 0;
+    font-size: 2rem;
+    color: #d2691e;
+}
+
+.red-x {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 150px;
+    height: auto;
+    display: none;
+}
+
+.tier-name {
+    font-size: 2rem;
+    margin-bottom: 0;
+    margin-top: 50px;
+    color: #8b0000;
+}
+
+.reward {
+    font-size: 1.5rem;
+    margin: 0;
+}

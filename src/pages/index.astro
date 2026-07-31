@@ -1,17 +1,30 @@
 ---
-
+import "../styles/global.css";
+import WantedPoster from "../components/WantedPoster.astro";
+import PointsOverlay from "../components/points_overlay.astro";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+<html>
+    <body>
+        <PointsOverlay />
+        <WantedPoster />
+    </body>
 </html>
+
+<script>
+    const form = document.querySelector<HTMLFormElement>("#name-form");
+    const input = document.querySelector<HTMLInputElement>("#name-input");
+    const greeting = document.querySelector<HTMLDivElement>("#greeting");
+
+    if (!form || !input || !greeting) throw new Error("Some id's were missing")
+
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const name = input.value.trim();
+
+        if (name) {
+            greeting.textContent = `Hello ${name}!`;
+        }
+    });
+</script>

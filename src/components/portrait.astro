@@ -1,0 +1,47 @@
+---
+const {img = "", name = "", points = 0} = Astro.props;
+import '../styles/character_portrait.css'
+import red_x from '../icons/red_X.png'
+import { Image } from 'astro:assets';
+---
+
+<wanted-card>
+    <div class="wanted-card" id="wanted_card" data-points={points}>
+        <!-- <p class="bounty-value-text rye-regular">REWARD</p>
+        <p class="bounty-value rye-regular">${points}</p> -->
+        <Image class="wanted_character" src={img} alt={name} />
+        <Image class="red-x" src={red_x} alt="X" style="display: none;" loading="eager" />
+        <h2 class="survivor-name">{name}</h2>
+    </div>
+</wanted-card>
+
+<script>
+    import { addPoints } from "../stores/points";
+
+    class WantedCard extends HTMLElement {
+        connectedCallback() {
+            const card = this.querySelector<HTMLDivElement>(".wanted-card");
+            const redX = this.querySelector<HTMLImageElement>(".red-x");
+
+            if (!card || !redX) throw new Error("Did not find elements");
+
+            let toggled = false;
+
+            card.addEventListener("click", () => {
+                toggled = !toggled;
+
+                const reward = Number(card.dataset.points);
+
+                if (toggled) {
+                    redX.style.display = "block"
+                    addPoints(reward);
+                } else {
+                    redX.style.display = "none"
+                    addPoints(-reward);
+                }
+            });
+        }
+    }
+
+    customElements.define("wanted-card", WantedCard);
+</script>
