@@ -69,9 +69,9 @@ const { points, inventory } = appStorage.get();
             <div class="confirmation-modal hidden">
                 <div class="alert-content">
                     <h3>Are ya sure, partner?</h3>
-                    <p>You're about to spend <span id="confirm-amount"></span> gold. This is a binding agreement between you and the <b>entity</b>.</p>
+                    <p>You're about to spend <span id="confirm-amount"></span> points. This is a binding agreement between you and the <b>entity</b>.</p>
                     <div class="modal-actions">
-                        <button class="confirm-yes">Yeehaw! Take My Gold!</button>
+                        <button class="confirm-yes">Yeehaw! Take My Points!</button>
                         <button class="confirm-no">Nah, I'm Good</button>
                     </div>
                 </div>
@@ -226,8 +226,8 @@ const { points, inventory } = appStorage.get();
             modal.className = "low-gold-alert";
             modal.innerHTML = `
                 <div class="alert-content">
-                    <h3>Out of Gold, Partner!</h3>
-                    <p>You don't have enough gold to make this purchase. Go rob a bank or sell your soul for more.</p>
+                    <h3>Out of Points, Partner!</h3>
+                    <p>You don't have enough points to make this purchase. Go rob a bank or sell your soul for more.</p>
                     <button class="close-alert">I'll be better... someday</button>
                 </div>
             `;
