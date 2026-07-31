@@ -1,3 +1,4 @@
 export function url(path: string) {
-    return import.meta.env.BASE_URL + path.replace(/^\//, "");
+    const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+    return base + path.replace(/^\//, "");
 }
