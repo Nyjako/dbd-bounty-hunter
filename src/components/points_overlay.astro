@@ -2,10 +2,17 @@
 import "../styles/points_display.css";
 
 import { appStorage } from "../stores/points";
+
 const { points, inventory } = appStorage.get();
+
+// Server-rendered shell only — the client script re-renders all of this
+// from the real (localStorage-backed) store right after hydration, since
+// the server has no access to a visitor's saved progress.
+const goodsForSale = inventory.filter((item) => item.category !== "add-on");
+const addonItem = inventory.find((item) => item.category === "add-on");
 ---
 
-<store-modal>
+<store-modal data-addon-price={addonItem?.price ?? 0}>
     <div class="modal-overlay" aria-hidden="true">
         <div class="modal-content">
             <button class="close-button" aria-label="Close modal">X</button>
@@ -17,13 +24,39 @@ const { points, inventory } = appStorage.get();
                 <span id="points-display">{points}</span>
             </div>
 
+            <!-- Player / Character Sheet -->
+            <section class="player-sheet">
+                <h3>Character Sheet</h3>
+
+                <div class="sheet-grid">
+                    <div class="sheet-block rank-block">
+                        <span class="sheet-label">Killer Rank</span>
+                        <div id="rank-display"></div>
+
+                        <br/>
+                        <div class="sheet-block addons-block">
+                            <span class="sheet-label">Add-ons</span>
+                            <div id="addon-slots" class="slot-grid addon-slot-grid"></div>
+                        </div>
+                    </div>
+
+                    <div class="sheet-block perks-block">
+                        <span class="sheet-label">Perks</span>
+                        <div id="pending-perk-banner" class="pending-perk-banner" hidden></div>
+                        <div id="perk-slots" class="slot-grid perk-slot-grid"></div>
+                    </div>
+
+
+                </div>
+            </section>
+
             <!-- Inventory Section -->
             <section class="inventory-section">
                 <h3>Goods for Sale</h3>
 
                 <div class="item-grid">
-                    {inventory.map((item) => (
-                        <div class="item-card" data-item-id={item.id}>
+                    {goodsForSale.map((item) => (
+                        <div class="item-card" data-item-id={item.id} data-category={item.category}>
                             <h4>{item.name}</h4>
 
                             <p>{item.description}</p>
@@ -32,37 +65,16 @@ const { points, inventory } = appStorage.get();
                                 Cost: {item.price} points
                             </div>
 
-                            <div class="item-stock">
-                                In stock: {item.quantity}
-                            </div>
-
                             <button
                                 class="buy-button"
                                 data-id={item.id}
                                 data-cost={item.price}
-                                disabled={item.quantity <= 0}
                             >
-                                {item.quantity > 0
-                                    ? "Buy This!"
-                                    : "Sold Out"}
+                                Buy This!
                             </button>
                         </div>
                     ))}
                 </div>
-
-            </section>
-
-
-            <section class="owned-section">
-
-                <h3>Your Collection</h3>
-
-                <div class="owned-grid">
-                    <div id="owned-items">
-                        No items purchased yet.
-                    </div>
-                </div>
-
             </section>
 
             <!-- Confirmation Modal -->
@@ -85,7 +97,23 @@ const { points, inventory } = appStorage.get();
 </points-display>
 
 <script>
-    import { appStorage, purchaseItem, canAffordItem } from "../stores/points.ts";
+    import {
+        appStorage,
+        purchaseItem,
+        purchaseAddonUpgrade,
+        equipPendingPerk,
+        canAffordItem,
+        canAffordAddonUpgrade,
+        isMaxKillerRank,
+        KILLER_RANKS,
+        ADDON_TIERS,
+        type AppStorage,
+    } from "../stores/points.ts";
+    import { perks as perkIcons } from "../data/perks.ts";
+
+    type PendingPurchase =
+        | { kind: "item"; id: string; cost: number }
+        | { kind: "addon"; slot: number; cost: number };
 
     class PointsDisplay extends HTMLElement {
         unsubscribe?: () => void;
@@ -122,49 +150,204 @@ const { points, inventory } = appStorage.get();
     customElements.define("store-modal", class extends HTMLElement {
         unsubscribe?: () => void;
         confirmationModal: HTMLElement | null = null;
-        currentItemId: string | null = null;
+        pendingPurchase: PendingPurchase | null = null;
+
+        scrollToPerkSelection() {
+            const modalContent = this.querySelector<HTMLElement>(".modal-content");
+            const banner = this.querySelector<HTMLElement>("#pending-perk-banner");
+
+            if (!modalContent || !banner) return;
+
+            // Wait for the store render triggered by appStorage.listen()
+            requestAnimationFrame(() => {
+                modalContent.scrollTo({
+                    top: banner.offsetTop - 20,
+                    behavior: "smooth",
+                });
+            });
+        }
 
         connectedCallback() {
             this.confirmationModal = this.querySelector(".confirmation-modal");
 
-            // Initialize point display
-            this.updatePointsDisplay();
-            this.updateOwnedItems();
+            this.render(appStorage.get());
 
-            // Setup event listeners
-            this.setupItemListeners();
             this.setupConfirmationHandlers();
             this.setupCloseHandlers();
 
-            // Keep points display (and this modal, if reused) in sync with the store
-            this.unsubscribe = appStorage.listen(() => {
-                this.updatePointsDisplay();
-                this.updateOwnedItems();
-            });
-
-            // Stay hidden until open() is called (e.g. by clicking the points display)
+            // Keep everything in sync with the store (points spent, perks
+            // equipped, add-ons upgraded, rank ups — all flow through here).
+            this.unsubscribe = appStorage.listen((state) => this.render(state));
         }
 
-        setupItemListeners() {
-            const buttons = this.querySelectorAll<HTMLButtonElement>(".buy-button");
-            buttons.forEach((button) => {
-                button.addEventListener("click", () => {
-                    const id = button.dataset.id;
-                    const cost = parseInt(button.dataset.cost ?? "0", 10);
-                    if (!id) return;
+        disconnectedCallback() {
+            this.unsubscribe?.();
+            this.hideConfirmationModal();
+        }
 
-                    this.currentItemId = id;
+        // ---------- master render ----------
+        render(state: AppStorage) {
+            this.renderPoints(state);
+            this.renderRank(state);
+            this.renderPerkSlots(state);
+            this.renderAddonSlots(state);
+            this.renderGoods(state);
+        }
+
+        renderPoints(state: AppStorage) {
+            const display = this.querySelector("#points-display");
+            if (display) display.textContent = state.points.toString();
+        }
+
+        // ---------- killer rank ----------
+        renderRank(state: AppStorage) {
+            const el = this.querySelector("#rank-display");
+            if (!el) return;
+
+            const maxed = isMaxKillerRank(state.killerRank);
+
+            el.innerHTML = `
+                <div class="rank-badge">${state.killerRank}</div>
+                <div class="rank-note">${
+                    maxed
+                        ? "Top of the ladder. Nowhere left to climb."
+                        : `Ladder: <br/>${KILLER_RANKS.join(" → ")}`
+                }</div>
+            `;
+        }
+
+        // ---------- perk slots ----------
+        renderPerkSlots(state: AppStorage) {
+            const banner = this.querySelector<HTMLElement>("#pending-perk-banner");
+            const grid = this.querySelector<HTMLElement>("#perk-slots");
+            if (!grid) return;
+
+            const pending = state.pendingPerk;
+
+            if (banner) {
+                if (pending) {
+                    banner.hidden = false;
+                    banner.innerHTML = `Rolled <strong>${pending.name}</strong> <span class="tier-chip">${pending.tier}-tier</span> — pick a slot below to equip it.`;
+                } else {
+                    banner.hidden = true;
+                    banner.innerHTML = "";
+                }
+            }
+
+            grid.innerHTML = state.perkSlots
+                .map((slot, index) => {
+                    const iconSrc = slot ? (perkIcons as Record<string, any>)[slot.name]?.src : null;
+                    const content = slot
+                        ? `
+                            ${iconSrc ? `<img class="perk-icon" src="${iconSrc}" alt="" loading="lazy" />` : ""}
+                            <span class="perk-name">${slot.name}</span>
+                            <span class="tier-chip">${slot.tier}-tier</span>
+                        `
+                        : `<span class="perk-name empty">Empty Slot</span>`;
+
+                    const clickable = Boolean(pending);
+
+                    return `
+                        <button
+                            type="button"
+                            class="slot-card perk-slot ${clickable ? "is-clickable" : ""}"
+                            data-slot-index="${index}"
+                            ${clickable ? "" : "disabled"}
+                        >
+                            ${content}
+                            ${clickable ? `<span class="slot-cta">Place here</span>` : ""}
+                        </button>
+                    `;
+                })
+                .join("");
+
+            grid.querySelectorAll<HTMLButtonElement>(".perk-slot").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    if (!appStorage.get().pendingPerk) return;
+                    const index = Number(btn.dataset.slotIndex);
+                    equipPendingPerk(index);
+                });
+            });
+        }
+
+        // ---------- addon slots ----------
+        renderAddonSlots(state: AppStorage) {
+            const grid = this.querySelector<HTMLElement>("#addon-slots");
+            if (!grid) return;
+
+            const addonPriceAttr = this.getAttribute("data-addon-price");
+            const addonPrice = Number(addonPriceAttr ?? 0);
+
+            grid.innerHTML = state.addonSlots
+                .map((tierIndex, index) => {
+                    const tierName = ADDON_TIERS[tierIndex];
+                    const maxed = tierIndex >= ADDON_TIERS.length - 1;
+
+                    return `
+                        <div class="slot-card addon-slot">
+                            <span class="tier-chip addon-tier addon-tier-${tierIndex}">${tierName}</span>
+                            <div class="addon-dots">
+                                ${ADDON_TIERS.map((_, i) => `<span class="dot ${i <= tierIndex ? "filled" : ""}"></span>`).join("")}
+                            </div>
+                            ${
+                                maxed
+                                    ? `<span class="slot-cta muted">Maxed out</span>`
+                                    : `<button type="button" class="upgrade-addon-button" data-addon-slot="${index}" data-cost="${addonPrice}">Upgrade — ${addonPrice} pts</button>`
+                            }
+                        </div>
+                    `;
+                })
+                .join("");
+
+            grid.querySelectorAll<HTMLButtonElement>(".upgrade-addon-button").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const slot = Number(btn.dataset.addonSlot);
+                    const cost = Number(btn.dataset.cost ?? "0");
+                    this.pendingPurchase = { kind: "addon", slot, cost };
                     this.showConfirmationModal(cost);
                 });
             });
         }
 
+        // ---------- goods for sale ----------
+        renderGoods(state: AppStorage) {
+            const cards = this.querySelectorAll<HTMLElement>(".item-card[data-item-id]");
+
+            cards.forEach((card) => {
+                const id = card.dataset.itemId;
+                if (!id) return;
+
+                const item = state.inventory.find((i) => i.id === id);
+                const button = card.querySelector<HTMLButtonElement>(".buy-button");
+                if (!item || !button) return;
+
+                const maxedKiller = item.category === "killer" && isMaxKillerRank(state.killerRank);
+
+                button.disabled = maxedKiller;
+                button.textContent = maxedKiller ? "Rank Maxed" : "Buy This!";
+
+                // (Re)attach the click handler idempotently — cloning avoids
+                // stacking duplicate listeners across re-renders.
+                if (!button.dataset.bound) {
+                    button.dataset.bound = "true";
+                    button.addEventListener("click", () => {
+                        const cost = parseInt(button.dataset.cost ?? "0", 10);
+                        this.pendingPurchase = { kind: "item", id, cost };
+                        this.showConfirmationModal(cost);
+                    });
+                }
+            });
+        }
+
+        // ---------- confirmation modal ----------
         showConfirmationModal(cost: number) {
             const amountDisplay = this.querySelector("#confirm-amount");
-            if (amountDisplay) {
-                amountDisplay.textContent = cost.toString();
-            }
+            if (amountDisplay) amountDisplay.textContent = cost.toString();
             this.confirmationModal?.classList.remove("hidden");
+        }
+
+        hideConfirmationModal() {
+            this.confirmationModal?.classList.add("hidden");
         }
 
         setupConfirmationHandlers() {
@@ -172,23 +355,43 @@ const { points, inventory } = appStorage.get();
             const noBtn = this.querySelector(".confirm-no");
 
             yesBtn?.addEventListener("click", () => {
-                if (!this.currentItemId) return;
+                const purchase = this.pendingPurchase;
+                if (!purchase) return;
 
-                if (canAffordItem(this.currentItemId)) {
-                    const success = purchaseItem(this.currentItemId);
-                    this.hideConfirmationModal();
-                    if (success) {
-                        alert("Transaction complete! You're now a little richer... or poorer. Depends on your perspective.");
-                        this.refreshItemCard(this.currentItemId);
-                    }
+                let success = false;
+                let afford = false;
+
+                if (purchase.kind === "item") {
+                    afford = canAffordItem(purchase.id);
+                    if (afford) success = purchaseItem(purchase.id);
                 } else {
-                    this.hideConfirmationModal();
-                    this.showLowGoldAlert();
+                    afford = canAffordAddonUpgrade();
+                    if (afford) success = purchaseAddonUpgrade(purchase.slot);
                 }
+
+                this.hideConfirmationModal();
+
+                if (!afford) {
+                    this.showLowGoldAlert();
+                } else if (!success) {
+                    this.showAlert(
+                        "No Luck, Partner",
+                        "That didn't go through — that tier might be fully claimed already, or the slot's maxed out.",
+                    );
+                } else if (purchase.kind === "item") {
+                    const state = appStorage.get();
+
+                    if (state.pendingPerk) {
+                        this.scrollToPerkSelection();
+                    }
+                }
+
+                this.pendingPurchase = null;
             });
 
             noBtn?.addEventListener("click", () => {
                 this.hideConfirmationModal();
+                this.pendingPurchase = null;
             });
         }
 
@@ -198,7 +401,6 @@ const { points, inventory } = appStorage.get();
 
             closeBtn?.addEventListener("click", () => this.close());
 
-            // Close when clicking the dark overlay, but not the modal content itself
             overlay?.addEventListener("click", (e) => {
                 if (e.target === overlay) this.close();
             });
@@ -212,22 +414,24 @@ const { points, inventory } = appStorage.get();
         close() {
             this.classList.remove("is-open");
             this.querySelector(".modal-overlay")?.setAttribute("aria-hidden", "true");
-            // reset any transient state so it starts fresh next time it's opened
             this.hideConfirmationModal();
-            this.currentItemId = null;
-        }
-
-        hideConfirmationModal() {
-            this.confirmationModal?.classList.add("hidden");
+            this.pendingPurchase = null;
         }
 
         showLowGoldAlert() {
+            this.showAlert(
+                "Out of Points, Partner!",
+                "You don't have enough points to make this purchase. Go rob a bank or sell your soul for more.",
+            );
+        }
+
+        showAlert(title: string, body: string) {
             const modal = document.createElement("div");
             modal.className = "low-gold-alert";
             modal.innerHTML = `
                 <div class="alert-content">
-                    <h3>Out of Points, Partner!</h3>
-                    <p>You don't have enough points to make this purchase. Go rob a bank or sell your soul for more.</p>
+                    <h3>${title}</h3>
+                    <p>${body}</p>
                     <button class="close-alert">I'll be better... someday</button>
                 </div>
             `;
@@ -235,59 +439,7 @@ const { points, inventory } = appStorage.get();
             document.body.appendChild(modal);
 
             const closeBtn = modal.querySelector(".close-alert");
-            closeBtn?.addEventListener("click", () => {
-                modal.remove();
-            });
-        }
-
-        updatePointsDisplay() {
-            const display = this.querySelector("#points-display");
-            if (display) {
-                display.textContent = appStorage.get().points.toString();
-            }
-        }
-
-        refreshItemCard(itemId: string) {
-            const item = appStorage.get().inventory.find((i) => i.id === itemId);
-            const card = this.querySelector<HTMLElement>(`[data-item-id="${itemId}"]`);
-            if (!item || !card) return;
-
-            const stockEl = card.querySelector(".item-stock");
-            const buyBtn = card.querySelector<HTMLButtonElement>(".buy-button");
-
-            if (stockEl) stockEl.textContent = `In stock: ${item.quantity}`;
-            if (buyBtn) {
-                buyBtn.disabled = item.quantity <= 0;
-                buyBtn.textContent = item.quantity > 0 ? "Buy This!" : "Sold Out";
-            }
-        }
-
-        disconnectedCallback() {
-            this.unsubscribe?.();
-            this.hideConfirmationModal();
-        }
-
-        updateOwnedItems() {
-            const container = this.querySelector("#owned-items");
-
-            if (!container) return;
-
-            const owned = appStorage.get().ownedItems;
-
-            if (owned.length === 0) {
-                container.innerHTML =
-                    "No items purchased yet.";
-                return;
-            }
-
-
-            container.innerHTML = owned.map(item => `
-                <div class="owned-card">
-                    <h4>${item.name}</h4>
-                    <p>${item.description}</p>
-                    <strong>Owned: ${item.quantity}</strong>
-                </div>
-            `).join("");
+            closeBtn?.addEventListener("click", () => modal.remove());
         }
     });
 </script>
