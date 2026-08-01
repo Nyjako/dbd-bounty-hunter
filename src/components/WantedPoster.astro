@@ -27,6 +27,9 @@ const e_tier_characters_data = CHARACTER_TIERS.E.map(x => { return { name: x, im
 </header>
 
 <section class="wanted-poster">
+    <h2 class="tier-name rye-regular">The Forgotten Legends</h2>
+    <p class="reward">Rare identities from the Deadlands. These legendary survivors carry a different name, a different story, and a higher price on their head.</p>
+    <div class="poster-grid"> {CHARACTER_TIERS.LEGENDARY.map( (data) => ( <Portrait points={data.price} img={data.img} name={data.name}/> ) )} </div>
     <h2 class="tier-name rye-regular">The Final Hunt</h2>
     <p class="reward">Reward: 10 points</p>
     <div class="poster-grid"> {s_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name}/> ) )} </div>
