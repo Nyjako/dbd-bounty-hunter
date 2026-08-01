@@ -88,7 +88,7 @@ const initialInventory: InventoryItem[] = [
         id: "killer-upgrade",
         name: "Killer Upgrade",
         description:
-            "Become a more deadly presence across the Deadlands. Each upgrade pushes you beyond your limits, unlocking stronger ways to track, pressure, and eliminate your prey.",
+            "Become a more deadly presence across the Deadlands.",
         price: 25,
         quantity: 7,
         category: "killer",
@@ -107,7 +107,7 @@ const initialInventory: InventoryItem[] = [
         id: "add-on",
         name: "Add-on upgrade",
         description:
-            "Reinforce your tools of the hunt with improved modifications and forbidden craftsmanship. Better gear gives you new ways to control the trial and claim your bounty.",
+            "Reinforce your tools of the hunt with improved modifications and forbidden craftsmanship.",
         price: 0,
         quantity: 7,
         category: "add-on",
@@ -119,7 +119,7 @@ export interface AppStorage {
     points: number;
     inventory: InventoryItem[];
     ownedItems: OwnedItem[];
-    wantedCards: Record<string, boolean>;
+    wantedCards: Record<string, number>;
 }
 
 const initialAppStorage: AppStorage = {
@@ -268,18 +268,27 @@ function saveState(state: AppStorage) {
     }
 }
 
-export function getWantedCardState(name: string): boolean {
-    return appStorage.get().wantedCards[name] ?? false;
+// Number of times a given survivor has been sacrificed this run.
+// (Older saves stored a boolean here; coerce those to 0/1 so existing
+// progress doesn't get wiped out.)
+export function getWantedCardKills(name: string): number {
+    const raw = appStorage.get().wantedCards[name];
+
+    if (typeof raw === "boolean") {
+        return raw ? 1 : 0;
+    }
+
+    return raw ?? 0;
 }
 
-export function setWantedCardState(name: string, value: boolean) {
+export function setWantedCardKills(name: string, value: number) {
     const currentState = appStorage.get();
 
     const newState = {
         ...currentState,
         wantedCards: {
             ...currentState.wantedCards,
-            [name]: value,
+            [name]: Math.max(0, value),
         },
     };
 

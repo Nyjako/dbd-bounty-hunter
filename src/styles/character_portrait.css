@@ -121,27 +121,51 @@
     font-weight: 400;
 }
 
-.red-x {
+/* ---------- KILL COUNTER ---------- */
+.kill-badge {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 72%;
-    height: auto;
-    filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6));
-    pointer-events: none;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    display: none;
+    align-items: center;
+    gap: 5px;
+    background: rgba(122, 18, 32, 0.88);
+    border: 1px solid var(--blood-bright);
+    border-radius: 3px;
+    padding: 2px 7px 2px 5px;
+}
+.kill-badge .skull-icon {
+    width: 13px;
+    height: 13px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+.kill-badge .kill-count {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--parchment);
+    line-height: 1;
 }
 
-/* Caught state: once a card is toggled, the whole tile reads as "claimed" */
-.wanted-card:has(.red-x[style*="block"]) {
+.undo-kill:hover {
+    border-color: var(--rust);
+    color: var(--rust);
+    cursor: pointer;
+}
+
+/* Sacrificed at least once: the tile stays huntable, just reads as "claimed" */
+.wanted-card.is-sacrificed {
     border-color: var(--blood);
     background: rgba(122, 18, 32, 0.1);
 }
-.wanted-card:has(.red-x[style*="block"]) .wanted_character {
-    filter: grayscale(100%) contrast(105%) brightness(45%);
+.wanted-card.is-sacrificed .wanted_character {
+    filter: grayscale(95%) contrast(110%) sepia(8%) brightness(60%);
 }
-.wanted-card:has(.red-x[style*="block"]) .survivor-name {
+.wanted-card.is-sacrificed:hover .wanted_character {
+    filter: grayscale(80%) contrast(115%) sepia(10%) brightness(70%);
+}
+.wanted-card.is-sacrificed .survivor-name {
     color: var(--ash-light);
-    text-decoration: line-through;
-    text-decoration-color: var(--blood-bright);
 }

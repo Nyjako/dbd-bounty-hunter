@@ -1,48 +1,78 @@
 ---
 const {img = "", name = "", points = 0} = Astro.props;
 import '../styles/character_portrait.css'
-import red_x from '../icons/red_X.png'
+import sacrificed from '../icons/sacrificed.webp'
 import { Image } from 'astro:assets';
 ---
 
 <wanted-card>
-    <div class="wanted-card" id="wanted_card" data-points={points}>
+    <div class="wanted-card" data-points={points}>
         <Image class="wanted_character" src={img} alt={name} loading="lazy" />
-        <Image class="red-x" src={red_x} alt="X" style="display: none;" loading="lazy" />
+
+        <button class="kill-badge undo-kill">
+            <Image class="skull-icon" src={sacrificed} alt="" loading="lazy" />
+            <span class="kill-count">0</span>
+        </button>
+
+        <!-- <button
+            class="undo-kill"
+            type="button"
+            aria-label={`Remove one kill for ${name}`}
+        >
+            &minus;
+        </button> -->
+
         <h2 class="survivor-name">{name}</h2>
     </div>
 </wanted-card>
 
 <script>
-    import { addPoints, getWantedCardState, setWantedCardState } from "../stores/points";
+    import { addPoints, getWantedCardKills, setWantedCardKills } from "../stores/points";
 
     class WantedCard extends HTMLElement {
         connectedCallback() {
             const card = this.querySelector<HTMLDivElement>(".wanted-card");
-            const redX = this.querySelector<HTMLImageElement>(".red-x");
+            const badge = this.querySelector<HTMLDivElement>(".kill-badge");
+            const countEl = this.querySelector<HTMLSpanElement>(".kill-count");
+            const undoBtn = this.querySelector<HTMLButtonElement>(".undo-kill");
 
-            if (!card || !redX) throw new Error("Did not find elements");
+            if (!card || !badge || !countEl || !undoBtn) throw new Error("Did not find elements");
 
             const name = card.querySelector<HTMLHeadingElement>(".survivor-name")?.textContent ?? "";
             const reward = Number(card.dataset.points);
 
-            let toggled = getWantedCardState(name);
+            let kills = getWantedCardKills(name);
+
+            const render = () => {
+                countEl.textContent = String(kills);
+                badge.style.display = kills > 0 ? "flex" : "none";
+                undoBtn.style.display = kills > 0 ? "flex" : "none";
+                card.classList.toggle("is-sacrificed", kills > 0);
+            };
 
             // Restore state after page load
-            redX.style.display = toggled ? "block" : "none";
+            render();
 
+            // Each click on the card counts as another sacrifice — survivors
+            // can be hunted down more than once, and every kill pays out.
             card.addEventListener("click", () => {
-                toggled = !toggled;
+                kills += 1;
+                setWantedCardKills(name, kills);
+                addPoints(reward);
+                render();
+            });
 
-                setWantedCardState(name, toggled);
+            // Small undo control for misclicks, tucked in the corner so it
+            // doesn't fight with the "add a kill" click on the rest of the card.
+            undoBtn.addEventListener("click", (event) => {
+                event.stopPropagation();
 
-                if (toggled) {
-                    redX.style.display = "block";
-                    addPoints(reward);
-                } else {
-                    redX.style.display = "none";
-                    addPoints(-reward);
-                }
+                if (kills <= 0) return;
+
+                kills -= 1;
+                setWantedCardKills(name, kills);
+                addPoints(-reward);
+                render();
             });
         }
     }
