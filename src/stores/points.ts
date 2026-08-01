@@ -112,7 +112,7 @@ const initialInventory: InventoryItem[] = [
 export const KILLER_RANKS = ["F", "E", "D", "C", "B", "A", "S"] as const;
 
 // Add-on slot rarity ladder.
-export const ADDON_TIERS = ["None", "Brown", "Yellow", "Green", "Purple", "Iridescent"] as const;
+export const ADDON_TIERS = ["None", "Brown", "Green", "Blue", "Purple", "Iridescent"] as const;
 
 const PERK_SLOT_COUNT = 4;
 const ADDON_SLOT_COUNT = 2;
