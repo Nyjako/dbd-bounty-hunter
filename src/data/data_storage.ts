@@ -116,7 +116,7 @@ export const CHARACTER_TIERS = {
     ],
 }
 
-export const perks_tiers = {
+export const PERKS_TIERS = {
     S: [
         "Corrupt Intervention",
         "Pain Resonance",
@@ -264,6 +264,6 @@ export const perks_tiers = {
         "Distressing",
         "Undone",
         "Haywire",
-        "Shattered Hope",
+        "Boon Destroyer",
     ],
 };

@@ -139,23 +139,20 @@ store-modal .close-button:hover {
     gap: 14px;
 }
 
-.item-card,
-.owned-card {
+.item-card {
     background: var(--fog);
     border: 1px solid var(--ash);
     border-radius: var(--radius);
     padding: 18px;
 }
-.item-card h4,
-.owned-card h4 {
+.item-card h4 {
     font-family: "Inter", sans-serif;
     font-size: 0.98rem;
     font-weight: 700;
     color: var(--parchment);
     margin-bottom: 8px;
 }
-.item-card p,
-.owned-card p {
+.item-card p {
     font-size: 0.86rem;
     color: var(--text-dim);
     margin-bottom: 12px;
@@ -165,11 +162,6 @@ store-modal .close-button:hover {
     font-size: 0.78rem;
     color: var(--rust);
     margin-bottom: 4px;
-}
-.item-stock {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.74rem;
-    color: var(--ash-light) !important;
 }
 
 .buy-button {
@@ -200,21 +192,190 @@ store-modal .close-button:hover {
     cursor: not-allowed;
 }
 
-#owned-items {
+/* ---------- PLAYER / CHARACTER SHEET ---------- */
+.player-sheet {
+    border: 1px solid rgba(122, 18, 32, 0.35);
+    background: linear-gradient(180deg, rgba(122, 18, 32, 0.06), transparent);
+    border-radius: var(--radius);
+    padding: 22px 22px 26px;
+    margin-bottom: 8px;
+}
+.player-sheet h3 {
+    margin: 0 0 18px !important;
+}
+
+.sheet-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px;
-    color: var(--text-dim);
-    font-size: 0.9rem;
+    grid-template-columns: 1fr 2fr;
+    gap: 22px;
 }
-.owned-card {
-    border-color: var(--entity);
-    background: rgba(60, 92, 83, 0.08);
+@media (max-width: 620px) {
+    .sheet-grid {
+        grid-template-columns: 1fr;
+    }
 }
-.owned-card strong {
+
+.sheet-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.sheet-label {
+    font-family: "Special Elite", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ash-light);
+}
+
+.rank-badge {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Rye", cursive;
+    font-size: 2rem;
+    color: var(--parchment);
+    background: var(--fog);
+    border: 2px solid var(--rust);
+    border-radius: 50%;
+}
+.rank-note {
     font-family: "IBM Plex Mono", monospace;
-    font-size: 0.78rem;
-    color: #9fc3b6;
+    font-size: 0.72rem;
+    color: var(--ash-light);
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
+.pending-perk-banner {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--parchment-dim);
+    background: rgba(181, 101, 29, 0.14);
+    border: 1px solid rgba(181, 101, 29, 0.45);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+}
+.pending-perk-banner strong {
+    color: var(--parchment);
+}
+
+.slot-grid {
+    display: grid;
+    gap: 10px;
+}
+.perk-slot-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.addon-slot-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.slot-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    background: var(--fog);
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    padding: 14px 10px;
+    font-family: inherit;
+    color: inherit;
+}
+
+button.slot-card {
+    cursor: default;
+}
+button.slot-card.is-clickable {
+    cursor: pointer;
+    border-color: var(--rust);
+    background: rgba(181, 101, 29, 0.08);
+    transition: border-color 0.2s ease, transform 0.15s ease, background 0.2s ease;
+}
+button.slot-card.is-clickable:hover {
+    background: rgba(181, 101, 29, 0.16);
+    transform: translateY(-2px);
+}
+button.slot-card:disabled {
+    opacity: 0.85;
+}
+
+.perk-icon {
+    width: 75px;
+    height: 75px;
+    object-fit: contain;
+    border-radius: 3px;
+}
+.perk-name {
+    font-size: 0.82rem;
+    color: var(--parchment-dim);
+    font-weight: 600;
+}
+.perk-name.empty {
+    color: var(--ash-light);
+    font-weight: 400;
+    font-style: italic;
+}
+
+.tier-chip {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--rust);
+    border: 1px solid rgba(181, 101, 29, 0.4);
+    background: rgba(181, 101, 29, 0.1);
+    border-radius: 3px;
+    padding: 2px 7px;
+}
+
+.slot-cta {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--rust);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.slot-cta.muted {
+    color: var(--ash-light);
+}
+
+.addon-dots {
+    display: flex;
+    gap: 4px;
+    margin: 2px 0;
+}
+.addon-dots .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ash);
+    border: 1px solid var(--ash-light);
+}
+.addon-dots .dot.filled {
+    background: var(--rust);
+    border-color: var(--rust);
+}
+
+.upgrade-addon-button {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--blood-bright);
+    background: var(--blood);
+    color: var(--parchment);
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+.upgrade-addon-button:hover {
+    background: var(--blood-bright);
+    transform: translateY(-1px);
 }
 
 /* ---------- CONFIRM / ALERT MODALS ---------- */
