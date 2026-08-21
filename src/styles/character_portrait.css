@@ -29,6 +29,23 @@
     font-weight: 600;
 }
 
+.mode-badge {
+    display: inline-block;
+    margin-top: -30px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--rust);
+    border: 1px solid rgba(181, 101, 29, 0.4);
+    background: rgba(181, 101, 29, 0.1);
+    border-radius: 20px;
+    padding: 6px 14px;
+}
+.mode-badge[hidden] {
+    display: none;
+}
+
 .tier-name {
     font-family: "Rye", cursive;
     font-size: clamp(1.3rem, 2.6vw, 1.7rem);
@@ -168,4 +185,79 @@
 }
 .wanted-card.is-sacrificed .survivor-name {
     color: var(--ash-light);
+}
+
+/* ---------- VICTORY OVERLAY ---------- */
+hunt-progress {
+    display: block;
+}
+.completion-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2500;
+    background:
+        radial-gradient(ellipse 70% 50% at 50% 30%, rgba(122, 18, 32, 0.25), transparent 60%),
+        rgba(0, 0, 0, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.completion-overlay[hidden] {
+    display: none;
+}
+.completion-content {
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+}
+.completion-content h2 {
+    font-family: "Rye", cursive;
+    font-size: clamp(2.4rem, 7vw, 4rem);
+    color: var(--parchment);
+    letter-spacing: 0.5px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 40px rgba(122, 18, 32, 0.6);
+}
+.completion-content p {
+    font-family: "Special Elite", monospace;
+    font-size: 1.05rem;
+    color: #9fc3b6;
+    max-width: 52ch;
+    margin: 0 auto 36px;
+    line-height: 1.7;
+}
+.completion-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.completion-actions button {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 15px 26px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.completion-continue {
+    background: var(--blood);
+    border: 1px solid var(--blood-bright);
+    color: var(--parchment);
+}
+.completion-continue:hover {
+    background: var(--blood-bright);
+    transform: translateY(-1px);
+}
+.completion-reset {
+    background: transparent;
+    border: 1px solid var(--ash-light);
+    color: var(--text-dim);
+}
+.completion-reset:hover {
+    border-color: var(--rust);
+    color: var(--rust);
 }

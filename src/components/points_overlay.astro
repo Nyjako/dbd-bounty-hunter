@@ -4,13 +4,26 @@ import "../styles/points_display.css";
 import { appStorage } from "../stores/points";
 
 const { points, inventory } = appStorage.get();
-
-// Server-rendered shell only — the client script re-renders all of this
-// from the real (localStorage-backed) store right after hydration, since
-// the server has no access to a visitor's saved progress.
-const goodsForSale = inventory.filter((item) => item.category !== "add-on");
 const addonItem = inventory.find((item) => item.category === "add-on");
 ---
+
+<mode-select-gate>
+    <div class="mode-gate-overlay" hidden>
+        <div class="mode-gate-content">
+            <h2 class="rye-regular">Choose Your Hunt</h2>
+            <div class="mode-options">
+                <button type="button" class="mode-option" data-mode="sheriff">
+                    <h3>The Sheriff's List</h3>
+                    <p>Hunt every survivor on the bounty board. Legendary skins count as their original character, so claiming the character's bounty clears all of their legendary reskins.</p>
+                </button>
+                <button type="button" class="mode-option" data-mode="blacklist">
+                    <h3>The Black List</h3>
+                    <p>Every name. Every face. Every legendary reskin. Each character and every legendary variant must be hunted before the bounty board can be cleared.</p>
+                </button>
+            </div>
+        </div>
+    </div>
+</mode-select-gate>
 
 <store-modal data-addon-price={addonItem?.price ?? 0}>
     <div class="modal-overlay" aria-hidden="true">
@@ -32,8 +45,8 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                     <div class="sheet-block rank-block">
                         <span class="sheet-label">Killer Rank</span>
                         <div id="rank-display"></div>
+                        <div id="killer-actions" class="killer-actions"></div>
 
-                        <br/>
                         <div class="sheet-block addons-block">
                             <span class="sheet-label">Add-ons</span>
                             <div id="addon-slots" class="slot-grid addon-slot-grid"></div>
@@ -44,40 +57,18 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                         <span class="sheet-label">Perks</span>
                         <div id="pending-perk-banner" class="pending-perk-banner" hidden></div>
                         <div id="perk-slots" class="slot-grid perk-slot-grid"></div>
+                        <div id="perk-shop" class="perk-shop-row"></div>
                     </div>
-
-
                 </div>
             </section>
 
-            <!-- Inventory Section -->
-            <section class="inventory-section">
-                <h3>Goods for Sale</h3>
-
-                <div class="item-grid">
-                    {goodsForSale.map((item) => (
-                        <div class="item-card" data-item-id={item.id} data-category={item.category}>
-                            <h4>{item.name}</h4>
-
-                            <p>{item.description}</p>
-
-                            <div>
-                                Cost: {item.price} points
-                            </div>
-
-                            <button
-                                class="buy-button"
-                                data-id={item.id}
-                                data-cost={item.price}
-                            >
-                                Buy This!
-                            </button>
-                        </div>
-                    ))}
-                </div>
+            <!-- Danger Zone -->
+            <section class="danger-zone">
+                <h3>Danger Zone</h3>
+                <button type="button" class="reset-button">Delete All Progress</button>
             </section>
 
-            <!-- Confirmation Modal -->
+            <!-- Confirmation Modal (purchases) -->
             <div class="confirmation-modal hidden">
                 <div class="alert-content">
                     <h3>Are ya sure, partner?</h3>
@@ -85,6 +76,18 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                     <div class="modal-actions">
                         <button class="confirm-yes">Yeehaw! Take My Points!</button>
                         <button class="confirm-no">Nah, I'm Good</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reset Confirmation Modal -->
+            <div class="confirmation-modal reset-confirm hidden">
+                <div class="alert-content">
+                    <h3>Erase the Legend?</h3>
+                    <p>This clears every kill, perk, add-on, and killer rank you've earned. There's <b>no</b> undoing this, partner.</p>
+                    <div class="modal-actions">
+                        <button class="reset-yes">Yeehaw! Burn It Down</button>
+                        <button class="reset-no">Nah, I'm Good</button>
                     </div>
                 </div>
             </div>
@@ -104,16 +107,44 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         equipPendingPerk,
         canAffordItem,
         canAffordAddonUpgrade,
-        isMaxKillerRank,
-        KILLER_RANKS,
+        isMaxKiller,
+        resetProgress,
+        setGameMode,
+        getGameMode,
         ADDON_TIERS,
+        ADDON_TIER_COLORS,
         type AppStorage,
     } from "../stores/points.ts";
     import { perks as perkIcons } from "../data/perks.ts";
+    import { characters } from "../data/characters.ts";
+    import { KILLER_LADDER } from "../data/data_storage.ts";
 
     type PendingPurchase =
         | { kind: "item"; id: string; cost: number }
         | { kind: "addon"; slot: number; cost: number };
+
+    customElements.define("mode-select-gate", class extends HTMLElement {
+        connectedCallback() {
+            const overlay = this.querySelector<HTMLElement>(".mode-gate-overlay");
+
+            if (getGameMode()) {
+                // Already chosen — stays hidden, nothing to wire up.
+                this.remove();
+                return;
+            }
+
+            overlay?.removeAttribute("hidden");
+
+            this.querySelectorAll<HTMLButtonElement>(".mode-option").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const mode = btn.dataset.mode;
+                    if (mode !== "sheriff" && mode !== "blacklist") return;
+                    setGameMode(mode);
+                    window.location.reload();
+                });
+            });
+        }
+    });
 
     class PointsDisplay extends HTMLElement {
         unsubscribe?: () => void;
@@ -123,18 +154,13 @@ const addonItem = inventory.find((item) => item.category === "add-on");
 
             if (!value) return;
 
-            // initial value
             value.textContent = appStorage.get().points.toString();
 
-            // add click event listener to open store modal
             this.addEventListener("click", () => {
-                // there is a single store-modal instance rendered on the page;
-                // just show it rather than creating a new (empty) one
                 const modal = document.querySelector("store-modal");
                 (modal as any)?.open?.();
             });
 
-            // update whenever points change
             this.unsubscribe = appStorage.listen((newValue) => {
                 value.textContent = newValue.points.toString();
             });
@@ -150,6 +176,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
     customElements.define("store-modal", class extends HTMLElement {
         unsubscribe?: () => void;
         confirmationModal: HTMLElement | null = null;
+        resetConfirmModal: HTMLElement | null = null;
         pendingPurchase: PendingPurchase | null = null;
 
         scrollToPerkSelection() {
@@ -158,7 +185,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
 
             if (!modalContent || !banner) return;
 
-            // Wait for the store render triggered by appStorage.listen()
             requestAnimationFrame(() => {
                 modalContent.scrollTo({
                     top: banner.offsetTop - 20,
@@ -168,30 +194,33 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         }
 
         connectedCallback() {
-            this.confirmationModal = this.querySelector(".confirmation-modal");
+            const modals = this.querySelectorAll<HTMLElement>(".confirmation-modal");
+            this.confirmationModal = modals[0] ?? null;
+            this.resetConfirmModal = this.querySelector(".reset-confirm");
 
             this.render(appStorage.get());
 
             this.setupConfirmationHandlers();
+            this.setupResetHandlers();
             this.setupCloseHandlers();
 
-            // Keep everything in sync with the store (points spent, perks
-            // equipped, add-ons upgraded, rank ups — all flow through here).
             this.unsubscribe = appStorage.listen((state) => this.render(state));
         }
 
         disconnectedCallback() {
             this.unsubscribe?.();
             this.hideConfirmationModal();
+            this.hideResetModal();
         }
 
         // ---------- master render ----------
         render(state: AppStorage) {
             this.renderPoints(state);
             this.renderRank(state);
+            this.renderKillerActions(state);
             this.renderPerkSlots(state);
+            this.renderPerkShop(state);
             this.renderAddonSlots(state);
-            this.renderGoods(state);
         }
 
         renderPoints(state: AppStorage) {
@@ -204,16 +233,49 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             const el = this.querySelector("#rank-display");
             if (!el) return;
 
-            const maxed = isMaxKillerRank(state.killerRank);
+            const killer = KILLER_LADDER[state.killerIndex];
+            const iconSrc = (characters as Record<string, any>)[killer.img_name]?.src;
 
             el.innerHTML = `
-                <div class="rank-badge">${state.killerRank}</div>
-                <div class="rank-note">${
-                    maxed
-                        ? "Top of the ladder. Nowhere left to climb."
-                        : `Ladder: <br/>${KILLER_RANKS.join(" → ")}`
-                }</div>
+                <div class="killer-portrait-wrap">
+                    ${iconSrc ? `<img class="killer-portrait" src="${iconSrc}" alt="${killer.display_name}" />` : ""}
+                </div>
+                <div class="killer-name">${killer.display_name}</div>
+                <span class="tier-chip">${killer.tier}-tier</span>
             `;
+        }
+
+        renderKillerActions(state: AppStorage) {
+            const container = this.querySelector<HTMLElement>("#killer-actions");
+            if (!container) return;
+
+            const maxed = isMaxKiller(state.killerIndex);
+            const killerItems = state.inventory.filter(
+                (i) => i.category === "killer" && (!maxed || i.price === 0),
+            );
+
+            container.innerHTML = killerItems
+                .map((item) => {
+                    const label = maxed
+                        ? item.price > 0
+                            ? `Reroll Killer — ${item.price} pts`
+                            : "Reroll Killer (2 wins in a row)"
+                        : item.price > 0
+                            ? `Upgrade — ${item.price} pts`
+                            : "Free Upgrade (2 wins in a row)";
+
+                    return `<button type="button" class="buy-button killer-action-button" data-id="${item.id}" data-cost="${item.price}">${label}</button>`;
+                })
+                .join("");
+
+            container.querySelectorAll<HTMLButtonElement>(".killer-action-button").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const id = btn.dataset.id!;
+                    const cost = Number(btn.dataset.cost ?? "0");
+                    this.pendingPurchase = { kind: "item", id, cost };
+                    this.showConfirmationModal(cost);
+                });
+            });
         }
 
         // ---------- perk slots ----------
@@ -270,6 +332,32 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             });
         }
 
+        renderPerkShop(state: AppStorage) {
+            const container = this.querySelector<HTMLElement>("#perk-shop");
+            if (!container) return;
+
+            const perkItems = state.inventory.filter((i) => i.category === "perk");
+
+            container.innerHTML = perkItems
+                .map(
+                    (item) => `
+                        <button type="button" class="buy-button perk-shop-button" data-id="${item.id}" data-cost="${item.price}">
+                            ${item.perkTier}-Tier — ${item.price} pts
+                        </button>
+                    `,
+                )
+                .join("");
+
+            container.querySelectorAll<HTMLButtonElement>(".perk-shop-button").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const id = btn.dataset.id!;
+                    const cost = Number(btn.dataset.cost ?? "0");
+                    this.pendingPurchase = { kind: "item", id, cost };
+                    this.showConfirmationModal(cost);
+                });
+            });
+        }
+
         // ---------- addon slots ----------
         renderAddonSlots(state: AppStorage) {
             const grid = this.querySelector<HTMLElement>("#addon-slots");
@@ -281,13 +369,14 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             grid.innerHTML = state.addonSlots
                 .map((tierIndex, index) => {
                     const tierName = ADDON_TIERS[tierIndex];
+                    const tierColor = ADDON_TIER_COLORS[tierName];
                     const maxed = tierIndex >= ADDON_TIERS.length - 1;
 
                     return `
                         <div class="slot-card addon-slot">
-                            <span class="tier-chip addon-tier addon-tier-${tierIndex}">${tierName}</span>
+                            <span class="tier-chip addon-tier" style="color:${tierColor};border-color:${tierColor}66;background:${tierColor}1a;">${tierName}</span>
                             <div class="addon-dots">
-                                ${ADDON_TIERS.map((_, i) => `<span class="dot ${i <= tierIndex ? "filled" : ""}"></span>`).join("")}
+                                ${ADDON_TIERS.map((t, i) => `<span class="dot ${i <= tierIndex ? "filled" : ""}" style="${i <= tierIndex ? `background:${ADDON_TIER_COLORS[t]};border-color:${ADDON_TIER_COLORS[t]};` : ""}"></span>`).join("")}
                             </div>
                             ${
                                 maxed
@@ -309,37 +398,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             });
         }
 
-        // ---------- goods for sale ----------
-        renderGoods(state: AppStorage) {
-            const cards = this.querySelectorAll<HTMLElement>(".item-card[data-item-id]");
-
-            cards.forEach((card) => {
-                const id = card.dataset.itemId;
-                if (!id) return;
-
-                const item = state.inventory.find((i) => i.id === id);
-                const button = card.querySelector<HTMLButtonElement>(".buy-button");
-                if (!item || !button) return;
-
-                const maxedKiller = item.category === "killer" && isMaxKillerRank(state.killerRank);
-
-                button.disabled = maxedKiller;
-                button.textContent = maxedKiller ? "Rank Maxed" : "Buy This!";
-
-                // (Re)attach the click handler idempotently — cloning avoids
-                // stacking duplicate listeners across re-renders.
-                if (!button.dataset.bound) {
-                    button.dataset.bound = "true";
-                    button.addEventListener("click", () => {
-                        const cost = parseInt(button.dataset.cost ?? "0", 10);
-                        this.pendingPurchase = { kind: "item", id, cost };
-                        this.showConfirmationModal(cost);
-                    });
-                }
-            });
-        }
-
-        // ---------- confirmation modal ----------
+        // ---------- purchase confirmation modal ----------
         showConfirmationModal(cost: number) {
             const amountDisplay = this.querySelector("#confirm-amount");
             if (amountDisplay) amountDisplay.textContent = cost.toString();
@@ -351,8 +410,8 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         }
 
         setupConfirmationHandlers() {
-            const yesBtn = this.querySelector(".confirm-yes");
-            const noBtn = this.querySelector(".confirm-no");
+            const yesBtn = this.confirmationModal?.querySelector(".confirm-yes");
+            const noBtn = this.confirmationModal?.querySelector(".confirm-no");
 
             yesBtn?.addEventListener("click", () => {
                 const purchase = this.pendingPurchase;
@@ -395,6 +454,30 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             });
         }
 
+        // ---------- reset confirmation modal ----------
+        showResetModal() {
+            this.resetConfirmModal?.classList.remove("hidden");
+        }
+
+        hideResetModal() {
+            this.resetConfirmModal?.classList.add("hidden");
+        }
+
+        setupResetHandlers() {
+            const resetBtn = this.querySelector(".reset-button");
+            const yesBtn = this.resetConfirmModal?.querySelector(".reset-yes");
+            const noBtn = this.resetConfirmModal?.querySelector(".reset-no");
+
+            resetBtn?.addEventListener("click", () => this.showResetModal());
+
+            yesBtn?.addEventListener("click", () => {
+                resetProgress();
+                window.location.reload();
+            });
+
+            noBtn?.addEventListener("click", () => this.hideResetModal());
+        }
+
         setupCloseHandlers() {
             const closeBtn = this.querySelector(".close-button");
             const overlay = this.querySelector(".modal-overlay");
@@ -415,6 +498,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             this.classList.remove("is-open");
             this.querySelector(".modal-overlay")?.setAttribute("aria-hidden", "true");
             this.hideConfirmationModal();
+            this.hideResetModal();
             this.pendingPurchase = null;
         }
 

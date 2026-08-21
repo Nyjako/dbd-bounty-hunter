@@ -24,29 +24,29 @@ import GeraltOfRivia   from '../icons/legendary_characters/Vittorio - Geralt of 
 
 export const CHARACTER_TIERS = {
     LEGENDARY: [
-        { price: 7,  img: RoseMarigold,    name: "Rose Marigold"    },
-        { price: 7,  img: SagaAnderson,    name: "Saga Anderson"    },
-        { price: 3,  img: CybilBennett,    name: "Cybil Bennett"    },
-        { price: 3,  img: HinakoShimizu,   name: "Hinako Shimizu"   },
-        { price: 3,  img: JamesSunderland, name: "James Sunderland" },
-        { price: 3,  img: LisaGarland,     name: "Lisa Garland"     },
-        { price: 3,  img: Maria,           name: "Maria"            },
-        { price: 8,  img: EddieMunson,     name: "Eddie Munson"     },
-        { price: 8,  img: RainCarradine,   name: "Rain Carradine"   },
-        { price: 8,  img: WilliamHudson,   name: "William Hudson"   },
-        { price: 4,  img: ClaireRedfield,  name: "Claire Redfield"  },
-        { price: 4,  img: ShevaAlomar,     name: "Sheva Alomar"     },
-        { price: 4,  img: CarlosOliviera,  name: "Carlos Oliviera"  },
-        { price: 4,  img: ChirsRedfield,   name: "Chirs Redfield"   },
-        { price: 12, img: MaggieRhee,      name: "Maggie Rhee"      },
-        { price: 5,  img: RobinBuckley,    name: "Robin Buckley"    },
-        { price: 7,  img: Tubarao,         name: "Tubarao"          },
-        { price: 5,  img: DarylDixon,      name: "Daryl Dixon"      },
-        { price: 5,  img: JonathanByers,   name: "Jonathan Byers"   },
-        { price: 5,  img: Alucard,         name: "Alucard"          },
-        { price: 5,  img: RichterBelmont,  name: "Richter Belmont"  },
-        { price: 5,  img: SomaCruz,        name: "Soma Cruz"        },
-        { price: 5,  img: GeraltOfRivia,   name: "Geralt of Rivia"  },
+        { price: 7,  img: RoseMarigold,    name: "Rose Marigold",    corresponding_character: "Alan Wake"        },
+        { price: 7,  img: SagaAnderson,    name: "Saga Anderson",    corresponding_character: "Alan Wake"        },
+        { price: 3,  img: CybilBennett,    name: "Cybil Bennett",    corresponding_character: "Cheryl Mason"     },
+        { price: 3,  img: HinakoShimizu,   name: "Hinako Shimizu",   corresponding_character: "Cheryl Mason"     },
+        { price: 3,  img: JamesSunderland, name: "James Sunderland", corresponding_character: "Cheryl Mason"     },
+        { price: 3,  img: LisaGarland,     name: "Lisa Garland",     corresponding_character: "Cheryl Mason"     },
+        { price: 3,  img: Maria,           name: "Maria",            corresponding_character: "Cheryl Mason"     },
+        { price: 8,  img: EddieMunson,     name: "Eddie Munson",     corresponding_character: "Dustin Henderson" },
+        { price: 8,  img: RainCarradine,   name: "Rain Carradine",   corresponding_character: "Ellen Ripley"     },
+        { price: 8,  img: WilliamHudson,   name: "William Hudson",   corresponding_character: "Ellen Ripley"     },
+        { price: 4,  img: ClaireRedfield,  name: "Claire Redfield",  corresponding_character: "Jill Valentine"   },
+        { price: 4,  img: ShevaAlomar,     name: "Sheva Alomar",     corresponding_character: "Jill Valentine"   },
+        { price: 4,  img: CarlosOliviera,  name: "Carlos Oliviera",  corresponding_character: "Leon S Kennedy"   },
+        { price: 4,  img: ChirsRedfield,   name: "Chirs Redfield",   corresponding_character: "Leon S Kennedy"   },
+        { price: 12, img: MaggieRhee,      name: "Maggie Rhee",      corresponding_character: "Michonne Grimes"  },
+        { price: 5,  img: RobinBuckley,    name: "Robin Buckley",    corresponding_character: "Nancy Wheeler"    },
+        { price: 7,  img: Tubarao,         name: "Tubarao",          corresponding_character: "Renato Lyra"      },
+        { price: 5,  img: DarylDixon,      name: "Daryl Dixon",      corresponding_character: "Rick Grimes"      },
+        { price: 5,  img: JonathanByers,   name: "Jonathan Byers",   corresponding_character: "Steve Harrington" },
+        { price: 5,  img: Alucard,         name: "Alucard",          corresponding_character: "Trevor Belmont"   },
+        { price: 5,  img: RichterBelmont,  name: "Richter Belmont",  corresponding_character: "Trevor Belmont"   },
+        { price: 5,  img: SomaCruz,        name: "Soma Cruz",        corresponding_character: "Trevor Belmont"   },
+        { price: 5,  img: GeraltOfRivia,   name: "Geralt of Rivia",  corresponding_character: "Vittorio Toscano" },
     ],
 
     S: [ // 10
@@ -267,3 +267,77 @@ export const PERKS_TIERS = {
         "Boon Destroyer",
     ],
 };
+
+export const KILLER_TIERS = {
+    S: [
+        { img_name: "The Nurse",       display_name: "The Nurse"       },
+        { img_name: "The Animatronic", display_name: "The Animatronic" },
+    ],
+    A: [
+        { img_name: "The Hillbilly",   display_name: "The Hillbilly"   },
+        { img_name: "The Slasher",     display_name: "The Slasher"     },
+        { img_name: "The Ghoul",       display_name: "The Ghoul"       },
+        { img_name: "The Twins",       display_name: "The Twins"       },
+        { img_name: "The Dracula",     display_name: "The Dracula"     },
+        { img_name: "The Singularity", display_name: "The Singularity" },
+        { img_name: "The Plague",      display_name: "The Plague"      },
+        { img_name: "The Oni",         display_name: "The Oni"         },
+    ],
+    B: [
+        { img_name: "The Blight",       display_name: "The Blight"       },
+        { img_name: "The Spirit",       display_name: "The Spirit"       },
+        { img_name: "The First",        display_name: "The First"        },
+        { img_name: "The Krasue",       display_name: "The Krasue"       },
+        { img_name: "The Nightmare",    display_name: "The Nightmare"    },
+        { img_name: "The Artist",       display_name: "The Artist"       },
+        { img_name: "The Houndmaster",  display_name: "The Houndmaster"  },
+        { img_name: "The Master Mind",  display_name: "The Master Mind"  },
+        { img_name: "The Shape",        display_name: "The Shape"        },
+        { img_name: "The Deathslinger", display_name: "The Deathslinger" },
+        { img_name: "The Unknown",      display_name: "The Unknown"      },
+    ],
+    C: [
+        { img_name: "The Cenobite",    display_name: "The Cenobite"    },
+        { img_name: "The Lich",        display_name: "The Lich"        },
+        { img_name: "The Clown",       display_name: "The Clown"       },
+        { img_name: "The Executioner", display_name: "The Executioner" },
+        { img_name: "The Wraith",      display_name: "The Wraith"      },
+        { img_name: "The Nemesis",     display_name: "The Nemesis"     },
+        { img_name: "The Knight",      display_name: "The Knight"      },
+        { img_name: "The Yerkes",      display_name: "The Chucky"      }, // Chucky
+        { img_name: "The Xenomorph",   display_name: "The Xenomorph"   },
+        { img_name: "The Trickster",   display_name: "The Trickster"   },
+    ],
+    D: [
+        { img_name: "The Cannibal",   display_name: "The Cannibal"   },
+        { img_name: "The Huntress",   display_name: "The Huntress"   },
+        { img_name: "The Demogorgon", display_name: "The Demogorgon" },
+        { img_name: "The Doctor",     display_name: "The Doctor"     },
+        { img_name: "The Legion",     display_name: "The Legion"     },
+        { img_name: "The Pig",        display_name: "The Pig"        },
+        { img_name: "The Onryo",      display_name: "The Onryo"      },
+        { img_name: "The Dredge",     display_name: "The Dredge"     },
+    ],
+    F: [
+        { img_name: "The Hag",            display_name: "The Hag"            },
+        { img_name: "The Skull Merchant", display_name: "The Skull Merchant" },
+        { img_name: "The Trapper",        display_name: "The Trapper"        },
+        { img_name: "The Ghostface",      display_name: "The Ghostface"      },
+    ],
+};
+
+export interface KillerLadderEntry {
+    img_name: string;
+    display_name: string;
+    tier: keyof typeof KILLER_TIERS;
+}
+
+// The order the player climbs through killers, weakest to strongest:
+// tier by tier from F up to S, and *within* each tier, last-listed-first —
+// e.g. in F: Ghostface -> Trapper -> Skull Merchant -> Hag, then on to D
+// starting from The Dredge down to The Cannibal, and so on.
+const KILLER_TIER_ORDER: (keyof typeof KILLER_TIERS)[] = ["F", "D", "C", "B", "A", "S"];
+
+export const KILLER_LADDER: KillerLadderEntry[] = KILLER_TIER_ORDER.flatMap((tier) =>
+    [...KILLER_TIERS[tier]].reverse().map((killer) => ({ ...killer, tier })),
+);

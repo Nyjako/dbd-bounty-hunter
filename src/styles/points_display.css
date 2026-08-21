@@ -220,6 +220,10 @@ store-modal .close-button:hover {
     flex-direction: column;
     gap: 10px;
 }
+.rank-block {
+    align-items: center;
+    text-align: center;
+}
 .sheet-label {
     font-family: "Special Elite", monospace;
     font-size: 0.7rem;
@@ -376,6 +380,156 @@ button.slot-card:disabled {
 .upgrade-addon-button:hover {
     background: var(--blood-bright);
     transform: translateY(-1px);
+}
+
+/* ---------- KILLER RANK ---------- */
+.killer-portrait-wrap {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid var(--rust);
+    background: var(--fog);
+}
+.killer-portrait {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(35%) contrast(110%);
+}
+.killer-name {
+    font-family: "Rye", cursive;
+    font-size: 1.05rem;
+    color: var(--parchment);
+    margin-top: 10px;
+}
+
+#rank-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.killer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+    width: 100%;
+    max-width: 220px;
+}
+.killer-actions .buy-button {
+    margin-top: 0;
+}
+
+/* ---------- PERK SHOP ROW ---------- */
+.perk-shop-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+.perk-shop-button {
+    width: auto;
+    margin-top: 0;
+    flex: 1 1 110px;
+}
+
+/* ---------- DANGER ZONE ---------- */
+.danger-zone {
+    border: 1px dashed var(--blood);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.danger-zone h3 {
+    margin: 0 !important;
+}
+.reset-button {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--blood);
+    background: transparent;
+    color: #cf6a72;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+.reset-button:hover {
+    background: var(--blood);
+    color: var(--parchment);
+}
+
+/* ---------- MODE SELECT GATE ---------- */
+mode-select-gate {
+    display: block;
+}
+.mode-gate-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.mode-gate-overlay[hidden] {
+    display: none;
+}
+.mode-gate-content {
+    max-width: 720px;
+    width: 100%;
+    text-align: center;
+}
+.mode-gate-content h2 {
+    font-size: 2rem;
+    color: var(--parchment);
+    margin-bottom: 22px;
+}
+.mode-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+@media (max-width: 620px) {
+    .mode-options {
+        grid-template-columns: 1fr;
+    }
+}
+.mode-option {
+    background: var(--fog-2);
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, transform 0.15s ease, background 0.2s ease;
+}
+.mode-option:hover {
+    border-color: var(--rust);
+    background: rgba(181, 101, 29, 0.08);
+    transform: translateY(-2px);
+}
+.mode-option h3 {
+    font-family: "Rye", cursive;
+    font-size: 1.2rem;
+    color: var(--parchment);
+    margin-bottom: 10px;
+}
+.mode-option p {
+    font-size: 0.86rem;
+    color: var(--text-dim);
+    line-height: 1.6;
 }
 
 /* ---------- CONFIRM / ALERT MODALS ---------- */

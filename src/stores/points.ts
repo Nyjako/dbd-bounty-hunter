@@ -1,5 +1,5 @@
 import { atom } from "nanostores";
-import { PERKS_TIERS } from "../data/data_storage";
+import { PERKS_TIERS, KILLER_LADDER } from "../data/data_storage";
 
 // Types for inventory system
 interface InventoryItem {
@@ -16,6 +16,8 @@ export interface EquippedPerk {
     name: string;
     tier: string;
 }
+
+export type GameMode = "sheriff" | "blacklist";
 
 const STORAGE_KEY = "game-storage";
 
@@ -108,11 +110,16 @@ const initialInventory: InventoryItem[] = [
     },
 ];
 
-// Killer rank ladder — starts at the bottom, caps out at S.
-export const KILLER_RANKS = ["F", "E", "D", "C", "B", "A", "S"] as const;
-
-// Add-on slot rarity ladder.
+// Add-on slot rarity ladder, and the colors used to badge each tier.
 export const ADDON_TIERS = ["None", "Brown", "Green", "Blue", "Purple", "Iridescent"] as const;
+export const ADDON_TIER_COLORS: Record<(typeof ADDON_TIERS)[number], string> = {
+    None: "#7a7f85",
+    Brown: "#a9713f",
+    Green: "#3fae52",
+    Blue: "#3f8cd6",
+    Purple: "#a256d6",
+    Iridescent: "#d6336c",
+};
 
 const PERK_SLOT_COUNT = 4;
 const ADDON_SLOT_COUNT = 2;
@@ -122,12 +129,15 @@ export interface AppStorage {
     points: number;
     inventory: InventoryItem[];
     wantedCards: Record<string, number>;
-    killerRank: (typeof KILLER_RANKS)[number];
+    // Index into KILLER_LADDER — the killer currently being played.
+    killerIndex: number;
     perkSlots: (EquippedPerk | null)[];
     addonSlots: number[];
     // A perk that's been rolled (and paid for) but not placed in a slot yet.
     // Persisted so a reload doesn't lose it before the player picks a slot.
     pendingPerk: EquippedPerk | null;
+    // Chosen once at the start of a run; null means "not chosen yet".
+    gameMode: GameMode | null;
 }
 
 function normalizePerkSlots(raw: unknown): (EquippedPerk | null)[] {
@@ -139,7 +149,6 @@ function normalizePerkSlots(raw: unknown): (EquippedPerk | null)[] {
         if (entry && typeof entry === "object" && "name" in entry) {
             return entry as EquippedPerk;
         }
-        // Backwards compatibility, in case an earlier shape ever stored plain strings.
         if (typeof entry === "string") {
             return { name: entry, tier: "?" };
         }
@@ -165,22 +174,29 @@ function normalizeAddonSlots(raw: unknown): number[] {
     return slots;
 }
 
-const initialAppStorage: AppStorage = {
-    points: savedState.points ?? 0,
-    // The catalog itself is static and code-defined — always start fresh from
-    // here rather than trusting a possibly-stale saved shape.
-    inventory: initialInventory,
-    wantedCards: savedState.wantedCards ?? {},
-    killerRank: (KILLER_RANKS as readonly string[]).includes(savedState.killerRank as string)
-        ? (savedState.killerRank as (typeof KILLER_RANKS)[number])
-        : KILLER_RANKS[0],
-    perkSlots: normalizePerkSlots(savedState.perkSlots),
-    addonSlots: normalizeAddonSlots(savedState.addonSlots),
-    pendingPerk: savedState.pendingPerk ?? null,
-};
+function normalizeKillerIndex(raw: unknown): number {
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0 || n >= KILLER_LADDER.length) return 0;
+    return n;
+}
+
+function buildInitialState(saved: Partial<AppStorage>): AppStorage {
+    return {
+        points: saved.points ?? 0,
+        // The catalog itself is static and code-defined — always start fresh
+        // from here rather than trusting a possibly-stale saved shape.
+        inventory: initialInventory,
+        wantedCards: saved.wantedCards ?? {},
+        killerIndex: normalizeKillerIndex(saved.killerIndex),
+        perkSlots: normalizePerkSlots(saved.perkSlots),
+        addonSlots: normalizeAddonSlots(saved.addonSlots),
+        pendingPerk: saved.pendingPerk ?? null,
+        gameMode: saved.gameMode === "sheriff" || saved.gameMode === "blacklist" ? saved.gameMode : null,
+    };
+}
 
 // Main store with TypeScript typing
-export const appStorage = atom<AppStorage>(initialAppStorage);
+export const appStorage = atom<AppStorage>(buildInitialState(savedState));
 
 // Point management functions
 export function setPoints(value: number) {
@@ -248,18 +264,38 @@ export function canAffordAddonUpgrade(): boolean {
     return canAffordItem("add-on");
 }
 
-export function getKillerRank() {
-    return appStorage.get().killerRank;
+// ---------- game mode ----------
+export function getGameMode() {
+    return appStorage.get().gameMode;
 }
 
-export function isMaxKillerRank(rank: string = getKillerRank()): boolean {
-    return rank === KILLER_RANKS[KILLER_RANKS.length - 1];
+export function setGameMode(mode: GameMode) {
+    const newState: AppStorage = { ...appStorage.get(), gameMode: mode };
+    appStorage.set(newState);
+    saveState(newState);
 }
 
-function nextRank(current: string): (typeof KILLER_RANKS)[number] {
-    const idx = (KILLER_RANKS as readonly string[]).indexOf(current);
-    if (idx === -1) return KILLER_RANKS[0];
-    return KILLER_RANKS[Math.min(idx + 1, KILLER_RANKS.length - 1)];
+// ---------- killer ladder ----------
+export function getKillerIndex() {
+    return appStorage.get().killerIndex;
+}
+
+export function getCurrentKiller() {
+    return KILLER_LADDER[appStorage.get().killerIndex];
+}
+
+export function isMaxKiller(index: number = getKillerIndex()): boolean {
+    return index >= KILLER_LADDER.length - 1;
+}
+
+function pickRandomKillerIndex(excludeIndex: number): number {
+    if (KILLER_LADDER.length <= 1) return excludeIndex;
+
+    let next = excludeIndex;
+    while (next === excludeIndex) {
+        next = Math.floor(Math.random() * KILLER_LADDER.length);
+    }
+    return next;
 }
 
 export function getPerkSlots() {
@@ -304,8 +340,13 @@ export function purchaseItem(itemId: string): boolean {
     };
 
     if (item.category === "killer") {
-        if (isMaxKillerRank(currentState.killerRank)) return false;
-        patch.killerRank = nextRank(currentState.killerRank);
+        if (isMaxKiller(currentState.killerIndex)) {
+            // Already at the top of the ladder — instead of upgrading,
+            // reroll to a random (different) killer.
+            patch.killerIndex = pickRandomKillerIndex(currentState.killerIndex);
+        } else {
+            patch.killerIndex = Math.min(currentState.killerIndex + 1, KILLER_LADDER.length - 1);
+        }
     } else if (item.category === "perk") {
         if (!item.perkTier) return false;
 
@@ -372,6 +413,24 @@ export function purchaseAddonUpgrade(slotIndex: number): boolean {
     return true;
 }
 
+// Wipes every bit of run progress — points, kills, killer, perks, add-ons,
+// and the chosen game mode. Does NOT reload the page; callers should do
+// that themselves so every component (which only reads state on load)
+// starts clean.
+export function resetProgress() {
+    const freshState = buildInitialState({});
+
+    appStorage.set(freshState);
+
+    if (typeof window !== "undefined" && window.localStorage) {
+        try {
+            window.localStorage.removeItem(STORAGE_KEY);
+        } catch {
+            // storage unavailable
+        }
+    }
+}
+
 function saveState(state: AppStorage) {
     if (typeof window === "undefined" || !window.localStorage) {
         return;
@@ -386,7 +445,8 @@ function saveState(state: AppStorage) {
     }
 }
 
-// Number of times a given survivor has been sacrificed this run.
+// Number of times a given survivor (or, in Sheriff's List mode, a whole
+// legendary-skin group sharing one canonical name) has been sacrificed.
 // (Older saves stored a boolean here; coerce those to 0/1 so existing
 // progress doesn't get wiped out.)
 export function getWantedCardKills(name: string): number {

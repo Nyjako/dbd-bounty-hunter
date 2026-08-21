@@ -12,6 +12,22 @@ const c_tier_characters_data = CHARACTER_TIERS.C.map(x => { return { name: x, im
 const d_tier_characters_data = CHARACTER_TIERS.D.map(x => { return { name: x, img: characters[x] } });
 const e_tier_characters_data = CHARACTER_TIERS.E.map(x => { return { name: x, img: characters[x] } });
 
+// Roster used to check for a full clear — differs by game mode:
+// Black List counts every card (legendaries included) as its own target;
+// Sheriff's List collapses legendary skins into their base character, so
+// only the base roster needs to be cleared.
+const baseRosterNames = [
+    ...CHARACTER_TIERS.S,
+    ...CHARACTER_TIERS.A,
+    ...CHARACTER_TIERS.B,
+    ...CHARACTER_TIERS.C,
+    ...CHARACTER_TIERS.D,
+    ...CHARACTER_TIERS.E,
+];
+const blacklistRosterNames = [
+    ...CHARACTER_TIERS.LEGENDARY.map((x) => x.name),
+    ...baseRosterNames,
+];
 ---
 
 <header class="hunt-header">
@@ -23,13 +39,30 @@ const e_tier_characters_data = CHARACTER_TIERS.E.map(x => { return { name: x, im
             <br/>
             <b>Hunt your targets and earn your bounty!</b>
         </p>
+        <span id="active-mode-badge" class="mode-badge" hidden></span>
     </div>
 </header>
+
+<hunt-progress
+    data-base-roster={JSON.stringify(baseRosterNames)}
+    data-blacklist-roster={JSON.stringify(blacklistRosterNames)}
+>
+    <div class="completion-overlay" hidden>
+        <div class="completion-content">
+            <h2 class="rye-regular">Every Bounty Collected</h2>
+            <p>Every name on the board has been crossed off. The Deadlands remember your work — the hunt is complete.</p>
+            <div class="completion-actions">
+                <button type="button" class="completion-continue">Continue the Hunt</button>
+                <button type="button" class="completion-reset">Clear Progress &amp; Start Over</button>
+            </div>
+        </div>
+    </div>
+</hunt-progress>
 
 <section class="wanted-poster">
     <h2 class="tier-name rye-regular">The Forgotten Legends</h2>
     <p class="reward">Rare identities from the Deadlands. These legendary survivors carry a different name, a different story, and a higher price on their head.</p>
-    <div class="poster-grid"> {CHARACTER_TIERS.LEGENDARY.map( (data) => ( <Portrait points={data.price} img={data.img} name={data.name}/> ) )} </div>
+    <div class="poster-grid"> {CHARACTER_TIERS.LEGENDARY.map( (data) => ( <Portrait points={data.price} img={data.img} name={data.name} correspondingCharacter={data.corresponding_character}/> ) )} </div>
     <h2 class="tier-name rye-regular">The Final Hunt</h2>
     <p class="reward">Reward: 10 points</p>
     <div class="poster-grid"> {s_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name}/> ) )} </div>
@@ -49,3 +82,64 @@ const e_tier_characters_data = CHARACTER_TIERS.E.map(x => { return { name: x, im
     <p class="reward">Reward: 1 points</p>
     <div class="poster-grid"> {e_tier_characters_data.map( (data) => ( <Portrait points=1 img={data.img} name={data.name}/> ) )} </div>
 </section>
+
+<script>
+    import { appStorage, getGameMode, resetProgress } from "../stores/points";
+
+    customElements.define("hunt-progress", class extends HTMLElement {
+        unsubscribe?: () => void;
+        dismissed = false;
+
+        connectedCallback() {
+            this.renderModeBadge();
+
+            const overlay = this.querySelector<HTMLElement>(".completion-overlay");
+            if (!overlay) return;
+
+            const baseRoster: string[] = JSON.parse(this.dataset.baseRoster || "[]");
+            const blacklistRoster: string[] = JSON.parse(this.dataset.blacklistRoster || "[]");
+
+            const render = () => {
+                const state = appStorage.get();
+                const roster = getGameMode() === "blacklist" ? blacklistRoster : baseRoster;
+                const complete =
+                    roster.length > 0 &&
+                    roster.every((name) => (state.wantedCards[name] ?? 0) > 0);
+
+                overlay.hidden = !complete || this.dismissed;
+            };
+
+            render();
+
+            this.unsubscribe = appStorage.listen(() => render());
+
+            this.querySelector(".completion-continue")?.addEventListener("click", () => {
+                this.dismissed = true;
+                overlay.hidden = true;
+            });
+
+            this.querySelector(".completion-reset")?.addEventListener("click", () => {
+                if (!window.confirm("This clears every kill, perk, add-on, and killer rank you've earned. There's no undoing this — clear it all?")) {
+                    return;
+                }
+                resetProgress();
+                window.location.reload();
+            });
+        }
+
+        disconnectedCallback() {
+            this.unsubscribe?.();
+        }
+
+        renderModeBadge() {
+            const badge = document.querySelector<HTMLElement>("#active-mode-badge");
+            if (!badge) return;
+
+            const mode = getGameMode();
+            if (!mode) return;
+
+            badge.hidden = false;
+            badge.textContent = mode === "blacklist" ? "Mode: The Black List" : "Mode: The Sheriff's List";
+        }
+    });
+</script>
