@@ -115,7 +115,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         ADDON_TIER_COLORS,
         type AppStorage,
     } from "../stores/points.ts";
-    import { perks as perkIcons } from "../data/perks.ts";
+    import { getPerkIcon } from "../lib/perk-icons.ts";
     import { characters } from "../data/characters.ts";
     import { KILLER_LADDER } from "../data/data_storage.ts";
 
@@ -298,7 +298,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
 
             grid.innerHTML = state.perkSlots
                 .map((slot, index) => {
-                    const iconSrc = slot ? (perkIcons as Record<string, any>)[slot.name]?.src : null;
+                    const iconSrc = slot ? getPerkIcon(slot.name)?.src : null;
                     const content = slot
                         ? `
                             ${iconSrc ? `<img class="perk-icon" src="${iconSrc}" alt="" loading="lazy" />` : ""}

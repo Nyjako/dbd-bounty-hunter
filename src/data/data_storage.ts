@@ -252,6 +252,7 @@ export const PERKS_TIERS = {
         "Two Can Play",
         "Unrelenting",
         "Territorial Imperative",
+        "Thatanophobia",
         "Iron Grasp",
         "Shadowborn",
         "Bloodhound",
