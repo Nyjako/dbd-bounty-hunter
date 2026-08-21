@@ -193,6 +193,7 @@ export const PERKS_TIERS = {
         "Plaything",
         "Oppression",
         "Franklins Demise",
+        "Hex Retribution",
     ],
     D: [
         "Gearhead",
