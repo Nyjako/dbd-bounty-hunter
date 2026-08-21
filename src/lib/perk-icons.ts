@@ -20,6 +20,8 @@ const ALIASES: Record<string, string> = {
     batteriesinclude: "batteriesincluded",
     bloodfavour: "bloodfavor", // US/UK spelling
     overcharge: "generatorovercharge",
+    rancor: "hatred",
+    shatteredhope: "boondestroyer"
 };
 
 const perkByNorm = new Map<string, string>();

@@ -121,7 +121,7 @@ function generatePerksMap() {
     let index = 0;
 
     walkDirectory(sourceDir, (fullPath, file) => {
-        const match = file.match(/^.*iconPerks_([^_]+)\.png$/);
+        const match = file.match(/^.*icons?Perks_([^_]+)\.png$/);
 
         if (!match) {
             return;
