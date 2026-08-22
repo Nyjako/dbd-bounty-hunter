@@ -9,7 +9,10 @@
     "dev": "make all && astro dev",
     "build": "make re && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check:perks": "node scripts/check-perks.cjs",
+    "check:characters": "node scripts/check-characters.cjs",
+    "check:data": "npm run check:perks && npm run check:characters"
   },
   "dependencies": {
     "astro": "^7.1.6",
