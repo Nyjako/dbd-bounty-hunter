@@ -1,6 +1,6 @@
-// Whether the player has been through the onboarding tutorial. Deliberately
+// Whether the player has been through the tutorial. Deliberately
 // its own localStorage key, completely separate from the game save
-// ("game-storage") — so "Delete All Progress" and importing a save never
+// so "Delete All Progress" and importing a save never
 // touch it, and a fresh run doesn't force returning players through it again.
 const TUTORIAL_KEY = "bounty-hunter-tutorial-seen";
 

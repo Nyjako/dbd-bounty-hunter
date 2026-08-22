@@ -12,10 +12,6 @@ const c_tier_characters_data = CHARACTER_TIERS.C.map(x => { return { name: x, im
 const d_tier_characters_data = CHARACTER_TIERS.D.map(x => { return { name: x, img: characters[x] } });
 const e_tier_characters_data = CHARACTER_TIERS.E.map(x => { return { name: x, img: characters[x] } });
 
-// Roster used to check for a full clear — differs by game mode:
-// Black List counts every card (legendaries included) as its own target;
-// Sheriff's List collapses legendary skins into their base character, so
-// only the base roster needs to be cleared.
 const baseRosterNames = [
     ...CHARACTER_TIERS.S,
     ...CHARACTER_TIERS.A,

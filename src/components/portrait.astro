@@ -36,10 +36,10 @@ import { Image } from 'astro:assets';
             const correspondingCharacter = this.dataset.corresponding || "";
             const reward = Number(card.dataset.points);
 
-            // In Sheriff's List (normal) mode, a legendary skin shares its
+            // In normal mode, a legendary skin shares its
             // kill counter with its original character — hunting either one
             // marks both as claimed, and no extra bounty stacks for the group.
-            // In Black List (hardcore) mode, every card tracks itself.
+            // In hardcore mode, every card tracks itself.
             const groupKey =
                 getGameMode() === "sheriff" && correspondingCharacter
                     ? correspondingCharacter
