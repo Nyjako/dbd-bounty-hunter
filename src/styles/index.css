@@ -297,6 +297,20 @@ nav .wrap {
     background: var(--blood-bright);
     transform: translateY(-1px);
 }
+.btn-hunt {
+    background: var(--rust);
+    color: var(--fog);
+    border: 1px solid var(--rust);
+    font-size: 0.92rem;
+    font-weight: 700;
+    padding: 16px 26px;
+    box-shadow: 0 10px 28px -10px rgba(181, 101, 29, 0.65);
+}
+.btn-hunt:hover {
+    background: #c9762a;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px -10px rgba(181, 101, 29, 0.8);
+}
 .btn-ghost {
     background: transparent;
     border: 1px solid var(--ash);

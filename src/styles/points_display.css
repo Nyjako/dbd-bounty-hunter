@@ -554,6 +554,144 @@ mode-select-gate {
     line-height: 1.6;
 }
 
+/* ---------- TUTORIAL GUIDE ---------- */
+tutorial-guide {
+    display: block;
+}
+.tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1900;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.tutorial-overlay[hidden] {
+    display: none;
+}
+.tutorial-content {
+    max-width: 560px;
+    width: 100%;
+    background: var(--fog-2);
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    padding: 34px 32px 28px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7);
+}
+.tutorial-progress {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+.tutorial-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ash);
+    border: 1px solid var(--ash-light);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+.tutorial-dot.is-active {
+    background: var(--rust);
+    border-color: var(--rust);
+}
+.tutorial-step h2 {
+    font-size: 1.4rem;
+    color: var(--parchment);
+    margin-bottom: 14px;
+    text-align: center;
+}
+.tutorial-step p {
+    font-size: 0.95rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    text-align: center;
+}
+.tutorial-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 30px;
+}
+.tutorial-nav {
+    display: flex;
+    gap: 10px;
+}
+.tutorial-skip {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--ash-light);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.tutorial-skip:hover {
+    color: var(--rust);
+}
+.tutorial-back,
+.tutorial-next {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 11px 20px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.tutorial-back {
+    background: transparent;
+    border: 1px solid var(--ash);
+    color: var(--parchment-dim);
+}
+.tutorial-back:hover {
+    border-color: var(--rust);
+    color: var(--rust);
+}
+.tutorial-next {
+    background: var(--blood);
+    border: 1px solid var(--blood-bright);
+    color: var(--parchment);
+}
+.tutorial-next:hover {
+    background: var(--blood-bright);
+    transform: translateY(-1px);
+}
+
+.tutorial-help-button {
+    position: fixed;
+    top: 5px;
+    right: 160px;
+    z-index: 900;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(11, 12, 14, 0.9);
+    border: 1px solid var(--ash);
+    color: var(--text-dim);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.tutorial-help-button:hover {
+    border-color: var(--rust);
+    color: var(--rust);
+    transform: translateY(-1px);
+}
+@media (max-width: 480px) {
+    .tutorial-help-button {
+        top: 54px;
+        right: 10px;
+    }
+}
+
 /* ---------- CONFIRM / ALERT MODALS ---------- */
 store-modal .confirmation-modal,
 .low-gold-alert {
