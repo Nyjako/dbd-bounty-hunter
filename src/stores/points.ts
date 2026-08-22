@@ -131,6 +131,11 @@ export interface AppStorage {
     wantedCards: Record<string, number>;
     // Index into KILLER_LADDER — the killer currently being played.
     killerIndex: number;
+    // Once true (set the first time killerIndex reaches the top of the
+    // ladder), stays true for the rest of the run — every future killer
+    // "upgrade" purchase is a reroll to a random killer, even though a
+    // reroll's resulting killerIndex usually isn't the max index anymore.
+    reachedMaxKiller: boolean;
     perkSlots: (EquippedPerk | null)[];
     addonSlots: number[];
     // A perk that's been rolled (and paid for) but not placed in a slot yet.
@@ -188,6 +193,7 @@ function buildInitialState(saved: Partial<AppStorage>): AppStorage {
         inventory: initialInventory,
         wantedCards: saved.wantedCards ?? {},
         killerIndex: normalizeKillerIndex(saved.killerIndex),
+        reachedMaxKiller: saved.reachedMaxKiller === true,
         perkSlots: normalizePerkSlots(saved.perkSlots),
         addonSlots: normalizeAddonSlots(saved.addonSlots),
         pendingPerk: saved.pendingPerk ?? null,
@@ -340,12 +346,18 @@ export function purchaseItem(itemId: string): boolean {
     };
 
     if (item.category === "killer") {
-        if (isMaxKiller(currentState.killerIndex)) {
-            // Already at the top of the ladder — instead of upgrading,
-            // reroll to a random (different) killer.
+        if (currentState.reachedMaxKiller) {
+            // Already hit the top of the ladder at some point this run —
+            // every subsequent "upgrade" stays a reroll, even though the
+            // killer we land on usually won't be the max index anymore.
             patch.killerIndex = pickRandomKillerIndex(currentState.killerIndex);
         } else {
-            patch.killerIndex = Math.min(currentState.killerIndex + 1, KILLER_LADDER.length - 1);
+            const nextIndex = Math.min(currentState.killerIndex + 1, KILLER_LADDER.length - 1);
+            patch.killerIndex = nextIndex;
+
+            if (nextIndex >= KILLER_LADDER.length - 1) {
+                patch.reachedMaxKiller = true;
+            }
         }
     } else if (item.category === "perk") {
         if (!item.perkTier) return false;
@@ -429,6 +441,39 @@ export function resetProgress() {
             // storage unavailable
         }
     }
+}
+
+// Serializes the current save to a JSON string the player can download.
+// Same shape as what's persisted to localStorage (no inventory — that's
+// a static, code-defined catalog, not part of anyone's save).
+export function exportSave(): string {
+    const { inventory, ...persisted } = appStorage.get();
+    return JSON.stringify(persisted, null, 2);
+}
+
+// Loads a save from a JSON string (as produced by exportSave). Reuses
+// buildInitialState's normalization, so a partial, older-shaped, or
+// slightly malformed save falls back to sane defaults per-field instead
+// of crashing. Does NOT reload the page; callers should do that themselves.
+export function importSave(json: string): { success: boolean; error?: string } {
+    let parsed: unknown;
+
+    try {
+        parsed = JSON.parse(json);
+    } catch {
+        return { success: false, error: "That file isn't valid JSON." };
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return { success: false, error: "That file doesn't look like a save." };
+    }
+
+    const freshState = buildInitialState(parsed as Partial<AppStorage>);
+
+    appStorage.set(freshState);
+    saveState(freshState);
+
+    return { success: true };
 }
 
 function saveState(state: AppStorage) {

@@ -452,6 +452,28 @@ button.slot-card:disabled {
 .danger-zone h3 {
     margin: 0 !important;
 }
+.danger-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.save-button {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--ash-light);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.save-button:hover {
+    border-color: var(--rust);
+    color: var(--rust);
+}
 .reset-button {
     font-family: "IBM Plex Mono", monospace;
     font-size: 0.78rem;

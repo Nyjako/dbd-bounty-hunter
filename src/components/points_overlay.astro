@@ -65,7 +65,12 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             <!-- Danger Zone -->
             <section class="danger-zone">
                 <h3>Danger Zone</h3>
-                <button type="button" class="reset-button">Delete All Progress</button>
+                <div class="danger-actions">
+                    <button type="button" class="save-button export-button">Export Save</button>
+                    <button type="button" class="save-button import-button">Import Save</button>
+                    <input type="file" accept="application/json,.json" class="import-file-input" hidden />
+                    <button type="button" class="reset-button">Delete All Progress</button>
+                </div>
             </section>
 
             <!-- Confirmation Modal (purchases) -->
@@ -107,8 +112,9 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         equipPendingPerk,
         canAffordItem,
         canAffordAddonUpgrade,
-        isMaxKiller,
         resetProgress,
+        exportSave,
+        importSave,
         setGameMode,
         getGameMode,
         ADDON_TIERS,
@@ -202,6 +208,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
 
             this.setupConfirmationHandlers();
             this.setupResetHandlers();
+            this.setupSaveHandlers();
             this.setupCloseHandlers();
 
             this.unsubscribe = appStorage.listen((state) => this.render(state));
@@ -249,7 +256,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             const container = this.querySelector<HTMLElement>("#killer-actions");
             if (!container) return;
 
-            const maxed = isMaxKiller(state.killerIndex);
+            const maxed = state.reachedMaxKiller;
             const killerItems = state.inventory.filter(
                 (i) => i.category === "killer" && (!maxed || i.price === 0),
             );
@@ -476,6 +483,60 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             });
 
             noBtn?.addEventListener("click", () => this.hideResetModal());
+        }
+
+        setupSaveHandlers() {
+            const exportBtn = this.querySelector<HTMLButtonElement>(".export-button");
+            const importBtn = this.querySelector<HTMLButtonElement>(".import-button");
+            const fileInput = this.querySelector<HTMLInputElement>(".import-file-input");
+
+            exportBtn?.addEventListener("click", () => {
+                const json = exportSave();
+                const blob = new Blob([json], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+
+                const date = new Date().toISOString().slice(0, 10);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `bounty-hunter-save-${date}.json`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+
+                URL.revokeObjectURL(url);
+            });
+
+            importBtn?.addEventListener("click", () => fileInput?.click());
+
+            fileInput?.addEventListener("change", () => {
+                const file = fileInput.files?.[0];
+                fileInput.value = ""; // allow re-selecting the same file later
+                if (!file) return;
+
+                if (
+                    !window.confirm(
+                        "Importing a save replaces everything currently on the board — points, kills, killer, perks, add-ons, and mode. Continue?",
+                    )
+                ) {
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const result = importSave(String(reader.result ?? ""));
+
+                    if (!result.success) {
+                        this.showAlert("Couldn't Read That Save", result.error ?? "Something about that file didn't check out.");
+                        return;
+                    }
+
+                    window.location.reload();
+                };
+                reader.onerror = () => {
+                    this.showAlert("Couldn't Read That Save", "The file couldn't be read — try again.");
+                };
+                reader.readAsText(file);
+            });
         }
 
         setupCloseHandlers() {
