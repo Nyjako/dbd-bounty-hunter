@@ -16,6 +16,7 @@ import MaggieRhee      from '../icons/legendary_characters/Michonne - Maggie Rhe
 import RobinBuckley    from '../icons/legendary_characters/Nancy - Robin Buckley.png';
 import Tubarao         from '../icons/legendary_characters/Renato - Tubarao.png';
 import DarylDixon      from '../icons/legendary_characters/Rick - Daryl Dixon.png';
+import GlennRhee       from '../icons/legendary_characters/Rick - Glenn Rhee.webp';
 import JonathanByers   from '../icons/legendary_characters/Steve - Jonathan Byers.png';
 import Alucard         from '../icons/legendary_characters/Trevor - Alucard.png';
 import RichterBelmont  from '../icons/legendary_characters/Trevor - Richter Belmont.png';
@@ -42,6 +43,7 @@ export const CHARACTER_TIERS = {
         { price: 5,  img: RobinBuckley,    name: "Robin Buckley",    corresponding_character: "Nancy Wheeler"    },
         { price: 7,  img: Tubarao,         name: "Tubarao",          corresponding_character: "Renato Lyra"      },
         { price: 5,  img: DarylDixon,      name: "Daryl Dixon",      corresponding_character: "Rick Grimes"      },
+        { price: 5,  img: GlennRhee,       name: "Glenn Rhee",       corresponding_character: "Rick Grimes"      },
         { price: 5,  img: JonathanByers,   name: "Jonathan Byers",   corresponding_character: "Steve Harrington" },
         { price: 5,  img: Alucard,         name: "Alucard",          corresponding_character: "Trevor Belmont"   },
         { price: 5,  img: RichterBelmont,  name: "Richter Belmont",  corresponding_character: "Trevor Belmont"   },
