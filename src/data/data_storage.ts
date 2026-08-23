@@ -193,6 +193,7 @@ export const PERKS_TIERS = {
         "Plaything",
         "Oppression",
         "Franklins Demise",
+        "Silent Shadow",
     ],
     D: [
         "Gearhead",
@@ -257,6 +258,8 @@ export const PERKS_TIERS = {
         "Bloodhound",
         "Unnerving Presence",
         "Stridor",
+        "Rampage",
+        "Scared To Death",
     ],
     F: [
         "Insidious",
