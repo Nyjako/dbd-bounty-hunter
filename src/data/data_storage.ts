@@ -16,7 +16,7 @@ import MaggieRhee      from '../icons/legendary_characters/Michonne - Maggie Rhe
 import RobinBuckley    from '../icons/legendary_characters/Nancy - Robin Buckley.png';
 import Tubarao         from '../icons/legendary_characters/Renato - Tubarao.png';
 import DarylDixon      from '../icons/legendary_characters/Rick - Daryl Dixon.png';
-import GlennRhee       from '../icons/legendary_characters/Rick - Glenn Rhee.webp';
+import GlennRhee       from '../icons/legendary_characters/Rick - Glenn Rhee.png';
 import JonathanByers   from '../icons/legendary_characters/Steve - Jonathan Byers.png';
 import Alucard         from '../icons/legendary_characters/Trevor - Alucard.png';
 import RichterBelmont  from '../icons/legendary_characters/Trevor - Richter Belmont.png';

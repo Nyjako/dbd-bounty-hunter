@@ -1,3 +1,3 @@
 # TODO
 
-* [ ] Add normal picture for Glenn Rhee
+* [X] Add normal picture for Glenn Rhee
