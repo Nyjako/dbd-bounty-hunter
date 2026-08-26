@@ -115,7 +115,6 @@ export const ADDON_TIER_COLORS: Record<(typeof ADDON_TIERS)[number], string> = {
     Iridescent: "#d6336c",
 };
 
-// Perk progression mode order — 4 purchases of one tier unlocks the next.
 export const PERK_TIER_ORDER: (keyof typeof PERKS_TIERS)[] = ["F", "D", "C", "A", "S"];
 export const PERK_TIER_UNLOCK_COUNT = 4;
 
@@ -126,7 +125,11 @@ export interface AppStorage {
     points: number;
     inventory: InventoryItem[];
     wantedCards: Record<string, number>;
-    killerIndex: number;
+    // The killer's stable img_name, not a ladder position — see
+    // getKillerLadderPosition(). A raw index would silently point at a
+    // different killer whenever KILLER_TIERS gets reordered, added to, or
+    // has a killer moved between tiers.
+    killerName: string;
     reachedMaxKiller: boolean;
     perkSlots: (EquippedPerk | null)[];
     addonSlots: number[];
@@ -172,10 +175,21 @@ function normalizeAddonSlots(raw: unknown): number[] {
     return slots;
 }
 
-function normalizeKillerIndex(raw: unknown): number {
-    const n = Number(raw);
-    if (!Number.isFinite(n) || n < 0 || n >= KILLER_LADDER.length) return 0;
-    return n;
+// Old saves stored a raw ladder index. Migrated once, on first load after
+// this change, using today's ladder — it's the best mapping available, but
+// see getKillerLadderPosition()'s comment for why this can only be a
+// one-time reconciliation, not a permanent fix for roster reordering.
+function normalizeKillerName(raw: unknown, legacyIndex: unknown): string {
+    if (typeof raw === "string" && KILLER_LADDER.some((k) => k.img_name === raw)) {
+        return raw;
+    }
+
+    const idx = Number(legacyIndex);
+    if (Number.isFinite(idx) && idx >= 0 && idx < KILLER_LADDER.length) {
+        return KILLER_LADDER[idx].img_name;
+    }
+
+    return KILLER_LADDER[0].img_name;
 }
 
 function normalizePerkTierPurchaseCounts(raw: unknown): Record<string, number> {
@@ -194,12 +208,12 @@ function normalizePerkTierPurchaseCounts(raw: unknown): Record<string, number> {
     return counts;
 }
 
-function buildInitialState(saved: Partial<AppStorage>): AppStorage {
+function buildInitialState(saved: Partial<AppStorage> & { killerIndex?: number }): AppStorage {
     return {
         points: saved.points ?? 0,
         inventory: initialInventory,
         wantedCards: saved.wantedCards ?? {},
-        killerIndex: normalizeKillerIndex(saved.killerIndex),
+        killerName: normalizeKillerName(saved.killerName, saved.killerIndex),
         reachedMaxKiller: saved.reachedMaxKiller === true,
         perkSlots: normalizePerkSlots(saved.perkSlots),
         addonSlots: normalizeAddonSlots(saved.addonSlots),
@@ -275,12 +289,11 @@ export function getPerkMode() {
     return appStorage.get().perkMode;
 }
 
-// Commits all run-setup choices in one go and persists them.
 export function startRun(options: {
     singleKillerMode: boolean;
     perkMode: PerkMode;
     gameMode: GameMode;
-    killerIndex?: number;
+    killerName?: string;
 }) {
     const currentState = appStorage.get();
     const newState: AppStorage = {
@@ -288,34 +301,40 @@ export function startRun(options: {
         singleKillerMode: options.singleKillerMode,
         perkMode: options.perkMode,
         gameMode: options.gameMode,
-        killerIndex:
-            options.killerIndex !== undefined
-                ? normalizeKillerIndex(options.killerIndex)
-                : currentState.killerIndex,
+        killerName:
+            options.killerName && KILLER_LADDER.some((k) => k.img_name === options.killerName)
+                ? options.killerName
+                : currentState.killerName,
     };
     appStorage.set(newState);
     saveState(newState);
 }
 
 // ---------- killer ladder ----------
-export function getKillerIndex() {
-    return appStorage.get().killerIndex;
-}
-
 export function getCurrentKiller() {
-    return KILLER_LADDER[appStorage.get().killerIndex];
+    return KILLER_LADDER.find((k) => k.img_name === appStorage.get().killerName) ?? KILLER_LADDER[0];
 }
 
-export function isMaxKiller(index: number = getKillerIndex()): boolean {
-    return index >= KILLER_LADDER.length - 1;
+// Derives a ladder position from the killer's stable name, on demand,
+// instead of storing the position itself. The roster (KILLER_TIERS) can be
+// reordered, added to, or have a killer moved to a different tier at any
+// time — this keeps existing players' actual killer intact through all of
+// that; only their upgrade/reroll *position* is recalculated.
+export function getKillerLadderPosition(name: string = appStorage.get().killerName): number {
+    const idx = KILLER_LADDER.findIndex((k) => k.img_name === name);
+    return idx === -1 ? 0 : idx;
 }
 
-function pickRandomKillerIndex(excludeIndex: number): number {
-    if (KILLER_LADDER.length <= 1) return excludeIndex;
+export function isMaxKiller(name: string = appStorage.get().killerName): boolean {
+    return getKillerLadderPosition(name) >= KILLER_LADDER.length - 1;
+}
 
-    let next = excludeIndex;
-    while (next === excludeIndex) {
-        next = Math.floor(Math.random() * KILLER_LADDER.length);
+function pickRandomKillerName(excludeName: string): string {
+    if (KILLER_LADDER.length <= 1) return excludeName;
+
+    let next = excludeName;
+    while (next === excludeName) {
+        next = KILLER_LADDER[Math.floor(Math.random() * KILLER_LADDER.length)].img_name;
     }
     return next;
 }
@@ -372,11 +391,12 @@ export function purchaseItem(itemId: string): boolean {
         if (currentState.singleKillerMode) return false;
 
         if (currentState.reachedMaxKiller) {
-            patch.killerIndex = pickRandomKillerIndex(currentState.killerIndex);
+            patch.killerName = pickRandomKillerName(currentState.killerName);
         } else {
-            const nextIndex = Math.min(currentState.killerIndex + 1, KILLER_LADDER.length - 1);
-            patch.killerIndex = nextIndex;
-            if (nextIndex >= KILLER_LADDER.length - 1) {
+            const position = getKillerLadderPosition(currentState.killerName);
+            const nextPosition = Math.min(position + 1, KILLER_LADDER.length - 1);
+            patch.killerName = KILLER_LADDER[nextPosition].img_name;
+            if (nextPosition >= KILLER_LADDER.length - 1) {
                 patch.reachedMaxKiller = true;
             }
         }
@@ -443,8 +463,6 @@ export function purchaseAddonUpgrade(slotIndex: number): boolean {
 }
 
 // ---------- main bounty ----------
-// A flat, one-per-run bounty. Toggling it off again (undoing a misclick)
-// reverses both the points and the claimed flag.
 export function toggleMainBounty(): { claimed: boolean; delta: number } {
     const currentState = appStorage.get();
     const claimed = !currentState.mainBountyClaimed;
@@ -521,6 +539,82 @@ export function setWantedCardKills(name: string, value: number) {
         ...currentState,
         wantedCards: { ...currentState.wantedCards, [name]: Math.max(0, value) },
     };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+// ---------- god mode ----------
+// Direct state overrides for local testing. Bypasses every normal purchase
+// or unlock rule on purpose. Activation itself is never persisted anywhere
+// (see GodModePanel.astro) — only the resulting values are, indistinguishable
+// from a normal save, exactly like any other state change.
+export function godSetPoints(value: number) {
+    setPoints(Math.max(0, Math.floor(value)));
+}
+
+export function godSetKiller(name: string) {
+    if (!KILLER_LADDER.some((k) => k.img_name === name)) return;
+    const newState = { ...appStorage.get(), killerName: name };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+export function godSetReachedMaxKiller(value: boolean) {
+    const newState = { ...appStorage.get(), reachedMaxKiller: value };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+export function godSetPerkSlot(slotIndex: number, perk: EquippedPerk | null) {
+    const currentState = appStorage.get();
+    if (slotIndex < 0 || slotIndex >= currentState.perkSlots.length) return;
+
+    const perkSlots = [...currentState.perkSlots];
+    perkSlots[slotIndex] = perk;
+
+    const newState = { ...currentState, perkSlots };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+export function godClearPendingPerk() {
+    const newState = { ...appStorage.get(), pendingPerk: null };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+export function godSetAddonSlot(slotIndex: number, tierIndex: number) {
+    const currentState = appStorage.get();
+    if (slotIndex < 0 || slotIndex >= currentState.addonSlots.length) return;
+
+    const addonSlots = [...currentState.addonSlots];
+    addonSlots[slotIndex] = Math.max(0, Math.min(ADDON_TIERS.length - 1, tierIndex));
+
+    const newState = { ...currentState, addonSlots };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+export function godSetGameMode(mode: GameMode) {
+    const newState = { ...appStorage.get(), gameMode: mode };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+export function godSetSingleKillerMode(value: boolean) {
+    const newState = { ...appStorage.get(), singleKillerMode: value };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+export function godSetPerkMode(mode: PerkMode) {
+    const newState = { ...appStorage.get(), perkMode: mode };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+export function godSetMainBountyClaimed(value: boolean) {
+    const newState = { ...appStorage.get(), mainBountyClaimed: value };
     appStorage.set(newState);
     saveState(newState);
 }

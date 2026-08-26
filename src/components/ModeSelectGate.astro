@@ -28,8 +28,8 @@ import { KILLER_LADDER } from "../data/data_storage";
                 <div class="killer-picker" hidden>
                     <label for="single-killer-select" class="sheet-label">Pick your killer</label>
                     <select id="single-killer-select" class="killer-select">
-                        {KILLER_LADDER.map((killer, index) => (
-                            <option value={index}>{killer.display_name} ({killer.tier}-tier)</option>
+                        {KILLER_LADDER.map((killer) => (
+                            <option value={killer.img_name}>{killer.display_name} ({killer.tier}-tier)</option>
                         ))}
                     </select>
                     <button type="button" class="buy-button killer-picker-confirm">Confirm Killer</button>
@@ -73,7 +73,7 @@ import { KILLER_LADDER } from "../data/data_storage";
     customElements.define("mode-select-gate", class extends HTMLElement {
         step = 1;
         singleKillerMode = false;
-        chosenKillerIndex = 0;
+        chosenKillerName = "";
         perkMode: PerkMode = "normal";
 
         connectedCallback() {
@@ -104,7 +104,7 @@ import { KILLER_LADDER } from "../data/data_storage";
 
             this.querySelector(".killer-picker-confirm")?.addEventListener("click", () => {
                 const select = this.querySelector<HTMLSelectElement>("#single-killer-select");
-                this.chosenKillerIndex = Number(select?.value ?? 0);
+                this.chosenKillerName = select?.value ?? "";
                 this.step = 2;
                 this.render();
             });
@@ -126,7 +126,7 @@ import { KILLER_LADDER } from "../data/data_storage";
                         singleKillerMode: this.singleKillerMode,
                         perkMode: this.perkMode,
                         gameMode: mode,
-                        killerIndex: this.singleKillerMode ? this.chosenKillerIndex : undefined,
+                        killerName: this.singleKillerMode ? this.chosenKillerName : undefined,
                     });
                     window.location.reload();
                 });

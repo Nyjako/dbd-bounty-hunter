@@ -930,3 +930,86 @@ changelog-viewer {
         right: 60px;
     }
 }
+
+/* ---------- GOD MODE ---------- */
+god-mode-panel {
+    display: block;
+}
+.god-mode-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.god-mode-overlay[hidden] {
+    display: none;
+}
+.god-mode-content {
+    position: relative;
+    max-width: 520px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: var(--fog-2);
+    border: 1px solid var(--entity);
+    border-radius: var(--radius);
+    padding: 40px 28px 28px;
+    box-shadow: 0 0 0 1px rgba(60, 92, 83, 0.4), 0 30px 60px -20px rgba(0, 0, 0, 0.8);
+}
+.god-mode-content h2 {
+    font-size: 1.4rem;
+    color: #9fc3b6;
+    margin-bottom: 6px;
+}
+.god-mode-hint {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ash-light);
+    margin-bottom: 22px;
+}
+.god-mode-section {
+    border-top: 1px solid rgba(74, 77, 82, 0.5);
+    padding-top: 14px;
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.god-mode-row {
+    display: flex;
+    gap: 8px;
+}
+.god-mode-input {
+    flex: 1;
+    padding: 9px 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--parchment-dim);
+    background: var(--fog);
+    border: 1px solid var(--ash-light);
+    border-radius: var(--radius);
+}
+.god-mode-input-narrow {
+    flex: 0 0 70px;
+}
+.god-mode-row .killer-select {
+    flex: 1;
+}
+.god-mode-row .buy-button {
+    margin-top: 0;
+    width: auto;
+    flex: 0 0 auto;
+    padding: 9px 14px;
+}
+.god-mode-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+}

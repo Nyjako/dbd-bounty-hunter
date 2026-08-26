@@ -187,7 +187,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             const el = this.querySelector("#rank-display");
             if (!el) return;
 
-            const killer = KILLER_LADDER[state.killerIndex];
+            const killer = KILLER_LADDER.find((k) => k.img_name === state.killerName) ?? KILLER_LADDER[0];
             const iconSrc = (characters as Record<string, any>)[killer.img_name]?.src;
 
             el.innerHTML = `

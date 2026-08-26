@@ -1,3 +1,9 @@
+# DBD 10.1.0 Chorus of sin | FIX #2
+
+## Bug fixes
+
+* Fixed a deeper issue with how a player's current killer was stored: it was saved as a plain position in the killer ladder, so adding, removing, or moving a killer between tiers could silently shift what that saved position pointed at. Your killer is now saved by name instead, so future roster changes won't move anyone onto a different killer than the one they were actually playing.
+
 # DBD 10.1.0 Chorus of sin | FIX #1
 
 ## Added missing killer

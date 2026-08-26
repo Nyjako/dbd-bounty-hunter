@@ -1,0 +1,263 @@
+---
+import "../styles/points_display.css";
+import { KILLER_LADDER, PERKS_TIERS } from "../data/data_storage";
+
+const ALL_PERKS = Object.entries(PERKS_TIERS).flatMap(([tier, names]) =>
+    (names as string[]).map((name) => ({ name, tier })),
+);
+const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescent"];
+---
+
+<god-mode-panel>
+    <div class="god-mode-overlay" hidden>
+        <div class="god-mode-content">
+            <button type="button" class="close-button god-mode-close" aria-label="Close">X</button>
+            <h2 class="rye-regular">God Mode</h2>
+            <p class="god-mode-hint">Direct state edits. Nothing here is validated against the normal rules.</p>
+
+            <div class="god-mode-section">
+                <span class="sheet-label">Points</span>
+                <div class="god-mode-row">
+                    <input type="number" class="god-mode-input" id="god-points-input" />
+                    <button type="button" class="buy-button" id="god-points-set">Set</button>
+                </div>
+            </div>
+
+            <div class="god-mode-section">
+                <span class="sheet-label">Killer</span>
+                <div class="god-mode-row">
+                    <select class="killer-select" id="god-killer-select">
+                        {KILLER_LADDER.map((k) => (
+                            <option value={k.img_name}>{k.display_name} ({k.tier}-tier)</option>
+                        ))}
+                    </select>
+                    <button type="button" class="buy-button" id="god-killer-set">Set</button>
+                </div>
+                <label class="god-mode-checkbox">
+                    <input type="checkbox" id="god-max-killer" />
+                    Reached max killer (unlocks reroll behavior)
+                </label>
+            </div>
+
+            <div class="god-mode-section">
+                <span class="sheet-label">Perk slots</span>
+                {[0, 1, 2, 3].map((slot) => (
+                    <div class="god-mode-row">
+                        <select class="killer-select" data-perk-slot={slot}>
+                            <option value="">— Empty —</option>
+                            {ALL_PERKS.map((p) => (
+                                <option value={`${p.tier}::${p.name}`}>{p.tier} — {p.name}</option>
+                            ))}
+                        </select>
+                        <button type="button" class="buy-button god-perk-set" data-perk-slot={slot}>Set</button>
+                    </div>
+                ))}
+                <button type="button" class="buy-button" id="god-clear-pending">Clear pending perk roll</button>
+            </div>
+
+            <div class="god-mode-section">
+                <span class="sheet-label">Add-on slots</span>
+                {[0, 1].map((slot) => (
+                    <div class="god-mode-row">
+                        <select class="killer-select" data-addon-slot={slot}>
+                            {ADDON_TIER_NAMES.map((tier, i) => (
+                                <option value={i}>{tier}</option>
+                            ))}
+                        </select>
+                        <button type="button" class="buy-button god-addon-set" data-addon-slot={slot}>Set</button>
+                    </div>
+                ))}
+            </div>
+
+            <div class="god-mode-section">
+                <span class="sheet-label">Run settings</span>
+                <div class="god-mode-row">
+                    <select class="killer-select" id="god-game-mode">
+                        <option value="sheriff">The Sheriff's List</option>
+                        <option value="blacklist">The Black List</option>
+                    </select>
+                    <button type="button" class="buy-button" id="god-game-mode-set">Set</button>
+                </div>
+                <label class="god-mode-checkbox">
+                    <input type="checkbox" id="god-single-killer" />
+                    Single Killer mode
+                </label>
+                <div class="god-mode-row">
+                    <select class="killer-select" id="god-perk-mode">
+                        <option value="normal">Open Shop</option>
+                        <option value="progression">Earned Tiers</option>
+                    </select>
+                    <button type="button" class="buy-button" id="god-perk-mode-set">Set</button>
+                </div>
+                <label class="god-mode-checkbox">
+                    <input type="checkbox" id="god-main-bounty" />
+                    Main Bounty claimed
+                </label>
+            </div>
+
+            <div class="god-mode-section">
+                <span class="sheet-label">Survivor kill count</span>
+                <div class="god-mode-row">
+                    <input type="text" class="god-mode-input" id="god-survivor-name" placeholder="Exact survivor name" />
+                    <input type="number" class="god-mode-input god-mode-input-narrow" id="god-survivor-count" value="1" />
+                    <button type="button" class="buy-button" id="god-survivor-set">Set</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</god-mode-panel>
+
+<script>
+    import {
+        appStorage,
+        godSetPoints,
+        godSetKiller,
+        godSetReachedMaxKiller,
+        godSetPerkSlot,
+        godClearPendingPerk,
+        godSetAddonSlot,
+        godSetGameMode,
+        godSetSingleKillerMode,
+        godSetPerkMode,
+        godSetMainBountyClaimed,
+        setWantedCardKills,
+        type GameMode,
+        type PerkMode,
+    } from "../stores/points";
+
+    const SEQUENCE = [
+        "ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown",
+        "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight",
+        "KeyB", "KeyA",
+    ];
+
+    customElements.define("god-mode-panel", class extends HTMLElement {
+        buffer: string[] = [];
+
+        connectedCallback() {
+            const overlay = this.querySelector<HTMLElement>(".god-mode-overlay");
+            if (!overlay) return;
+
+            document.addEventListener("keydown", (e) => {
+                this.buffer.push(e.code);
+                if (this.buffer.length > SEQUENCE.length) this.buffer.shift();
+
+                if (this.buffer.length === SEQUENCE.length && this.buffer.every((k, i) => k === SEQUENCE[i])) {
+                    this.buffer = [];
+                    this.syncInputs();
+                    overlay.hidden = !overlay.hidden;
+                }
+            });
+
+            this.querySelector(".god-mode-close")?.addEventListener("click", () => {
+                overlay.hidden = true;
+            });
+
+            this.wireControls();
+        }
+
+        syncInputs() {
+            const state = appStorage.get();
+
+            const pointsInput = this.querySelector<HTMLInputElement>("#god-points-input");
+            if (pointsInput) pointsInput.value = String(state.points);
+
+            const killerSelect = this.querySelector<HTMLSelectElement>("#god-killer-select");
+            if (killerSelect) killerSelect.value = state.killerName;
+
+            const maxKillerBox = this.querySelector<HTMLInputElement>("#god-max-killer");
+            if (maxKillerBox) maxKillerBox.checked = state.reachedMaxKiller;
+
+            this.querySelectorAll<HTMLSelectElement>("[data-perk-slot]").forEach((select) => {
+                const slot = Number(select.dataset.perkSlot);
+                const perk = state.perkSlots[slot];
+                select.value = perk ? `${perk.tier}::${perk.name}` : "";
+            });
+
+            this.querySelectorAll<HTMLSelectElement>("[data-addon-slot]").forEach((select) => {
+                const slot = Number(select.dataset.addonSlot);
+                select.value = String(state.addonSlots[slot] ?? 0);
+            });
+
+            const gameModeSelect = this.querySelector<HTMLSelectElement>("#god-game-mode");
+            if (gameModeSelect && state.gameMode) gameModeSelect.value = state.gameMode;
+
+            const singleKillerBox = this.querySelector<HTMLInputElement>("#god-single-killer");
+            if (singleKillerBox) singleKillerBox.checked = state.singleKillerMode;
+
+            const perkModeSelect = this.querySelector<HTMLSelectElement>("#god-perk-mode");
+            if (perkModeSelect) perkModeSelect.value = state.perkMode;
+
+            const mainBountyBox = this.querySelector<HTMLInputElement>("#god-main-bounty");
+            if (mainBountyBox) mainBountyBox.checked = state.mainBountyClaimed;
+        }
+
+        wireControls() {
+            this.querySelector("#god-points-set")?.addEventListener("click", () => {
+                const input = this.querySelector<HTMLInputElement>("#god-points-input");
+                godSetPoints(Number(input?.value ?? 0));
+            });
+
+            this.querySelector("#god-killer-set")?.addEventListener("click", () => {
+                const select = this.querySelector<HTMLSelectElement>("#god-killer-select");
+                if (select?.value) godSetKiller(select.value);
+            });
+
+            this.querySelector("#god-max-killer")?.addEventListener("change", (e) => {
+                godSetReachedMaxKiller((e.target as HTMLInputElement).checked);
+            });
+
+            this.querySelectorAll<HTMLButtonElement>(".god-perk-set").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const slot = Number(btn.dataset.perkSlot);
+                    const select = this.querySelector<HTMLSelectElement>(`[data-perk-slot="${slot}"]`);
+                    const value = select?.value ?? "";
+
+                    if (!value) {
+                        godSetPerkSlot(slot, null);
+                        return;
+                    }
+
+                    const [tier, name] = value.split("::");
+                    godSetPerkSlot(slot, { name, tier });
+                });
+            });
+
+            this.querySelector("#god-clear-pending")?.addEventListener("click", () => godClearPendingPerk());
+
+            this.querySelectorAll<HTMLButtonElement>(".god-addon-set").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const slot = Number(btn.dataset.addonSlot);
+                    const select = this.querySelector<HTMLSelectElement>(`[data-addon-slot="${slot}"]`);
+                    godSetAddonSlot(slot, Number(select?.value ?? 0));
+                });
+            });
+
+            this.querySelector("#god-game-mode-set")?.addEventListener("click", () => {
+                const select = this.querySelector<HTMLSelectElement>("#god-game-mode");
+                godSetGameMode((select?.value as GameMode) ?? "sheriff");
+            });
+
+            this.querySelector("#god-single-killer")?.addEventListener("change", (e) => {
+                godSetSingleKillerMode((e.target as HTMLInputElement).checked);
+            });
+
+            this.querySelector("#god-perk-mode-set")?.addEventListener("click", () => {
+                const select = this.querySelector<HTMLSelectElement>("#god-perk-mode");
+                godSetPerkMode((select?.value as PerkMode) ?? "normal");
+            });
+
+            this.querySelector("#god-main-bounty")?.addEventListener("change", (e) => {
+                godSetMainBountyClaimed((e.target as HTMLInputElement).checked);
+            });
+
+            this.querySelector("#god-survivor-set")?.addEventListener("click", () => {
+                const nameInput = this.querySelector<HTMLInputElement>("#god-survivor-name");
+                const countInput = this.querySelector<HTMLInputElement>("#god-survivor-count");
+                const name = nameInput?.value.trim();
+                if (!name) return;
+                setWantedCardKills(name, Number(countInput?.value ?? 0));
+            });
+        }
+    });
+</script>
