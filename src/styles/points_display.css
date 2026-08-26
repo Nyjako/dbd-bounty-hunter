@@ -94,7 +94,7 @@ store-modal .modal-content h3::before {
     color: var(--rust);
 }
 
-store-modal .close-button {
+.close-button {
     position: absolute;
     top: 18px;
     right: 18px;
@@ -110,7 +110,7 @@ store-modal .close-button {
         border-color 0.2s ease,
         color 0.2s ease;
 }
-store-modal .close-button:hover {
+.close-button:hover {
     border-color: var(--rust);
     color: var(--rust);
 }
@@ -436,6 +436,13 @@ button.slot-card:disabled {
     margin-top: 0;
     flex: 1 1 110px;
 }
+.perk-progress-note {
+    width: 100%;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    color: var(--ash-light);
+    margin-top: 8px;
+}
 
 /* ---------- DANGER ZONE ---------- */
 .danger-zone {
@@ -662,36 +669,6 @@ tutorial-guide {
     transform: translateY(-1px);
 }
 
-.tutorial-help-button {
-    position: fixed;
-    top: 5px;
-    right: 160px;
-    z-index: 900;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(11, 12, 14, 0.9);
-    border: 1px solid var(--ash);
-    color: var(--text-dim);
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    backdrop-filter: blur(6px);
-    transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
-}
-.tutorial-help-button:hover {
-    border-color: var(--rust);
-    color: var(--rust);
-    transform: translateY(-1px);
-}
-@media (max-width: 480px) {
-    .tutorial-help-button {
-        top: 54px;
-        right: 10px;
-    }
-}
-
 /* ---------- CONFIRM / ALERT MODALS ---------- */
 store-modal .confirmation-modal,
 .low-gold-alert {
@@ -772,4 +749,184 @@ store-modal .confirmation-modal.hidden {
 .confirm-no:hover {
     border-color: var(--rust);
     color: var(--rust);
+}
+
+/* ---------- MODE GATE WIZARD STEPS ---------- */
+.mode-gate-progress {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 22px;
+}
+.mode-gate-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ash);
+    border: 1px solid var(--ash-light);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+.mode-gate-dot.is-active {
+    background: var(--rust);
+    border-color: var(--rust);
+}
+
+.killer-picker {
+    margin-top: 18px;
+    padding: 18px;
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    background: var(--fog-2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.killer-picker[hidden] {
+    display: none;
+}
+.killer-select {
+    width: 100%;
+    padding: 10px 12px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.85rem;
+    color: var(--parchment-dim);
+    background: var(--fog);
+    border: 1px solid var(--ash-light);
+    border-radius: var(--radius);
+}
+.killer-picker-confirm {
+    margin-top: 0;
+}
+
+/* ---------- CHANGELOG VIEWER ---------- */
+changelog-viewer {
+    display: block;
+}
+.changelog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1950;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.changelog-overlay[hidden] {
+    display: none;
+}
+.changelog-content {
+    position: relative;
+    max-width: 640px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    background: var(--fog-2);
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    padding: 40px 32px 32px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7);
+}
+.changelog-content h2 {
+    font-size: 1.5rem;
+    color: var(--parchment);
+    margin-bottom: 20px;
+}
+.changelog-entry + .changelog-entry {
+    margin-top: 32px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(74, 77, 82, 0.5);
+}
+.changelog-version {
+    font-size: 1.15rem;
+    color: var(--rust);
+    margin-bottom: 14px;
+}
+.changelog-entries h3 {
+    font-family: "Special Elite", monospace;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--entity);
+    margin: 20px 0 8px;
+}
+.changelog-entries h3::before {
+    content: "§ ";
+    color: var(--rust);
+}
+.changelog-entries h4 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--parchment-dim);
+    margin: 12px 0 6px;
+}
+.changelog-entries p {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 8px;
+}
+.changelog-entries .changelog-note {
+    font-style: italic;
+    color: var(--ash-light);
+    font-size: 0.82rem;
+}
+.changelog-entries ul {
+    list-style: none;
+    margin-bottom: 10px;
+}
+.changelog-entries li {
+    font-size: 0.88rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+    padding-left: 16px;
+    position: relative;
+}
+.changelog-entries li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--rust);
+}
+
+.tutorial-help-button,
+.changelog-help-button {
+    position: fixed;
+    top: 5px;
+    z-index: 900;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(11, 12, 14, 0.9);
+    border: 1px solid var(--ash);
+    color: var(--text-dim);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.tutorial-help-button {
+    right: 160px;
+}
+.changelog-help-button {
+    right: 210px;
+    font-size: 0.95rem;
+}
+.tutorial-help-button:hover,
+.changelog-help-button:hover {
+    border-color: var(--rust);
+    color: var(--rust);
+    transform: translateY(-1px);
+}
+@media (max-width: 480px) {
+    .tutorial-help-button {
+        top: 54px;
+        right: 10px;
+    }
+    .changelog-help-button {
+        top: 54px;
+        right: 60px;
+    }
 }

@@ -1,0 +1,145 @@
+---
+import "../styles/points_display.css";
+import { KILLER_LADDER } from "../data/data_storage";
+---
+
+<mode-select-gate>
+    <div class="mode-gate-overlay" hidden>
+        <div class="mode-gate-content">
+            <div class="mode-gate-progress">
+                <span class="mode-gate-dot" data-dot="1"></span>
+                <span class="mode-gate-dot" data-dot="2"></span>
+                <span class="mode-gate-dot" data-dot="3"></span>
+            </div>
+
+            <div class="mode-gate-step" data-step="1">
+                <h2 class="rye-regular">Choose Your Killer</h2>
+                <div class="mode-options">
+                    <button type="button" class="mode-option" data-single-killer="false">
+                        <h3>Free Roam</h3>
+                        <p>Climb the killer ladder as usual — win streaks and points buy your way up to a stronger killer.</p>
+                    </button>
+                    <button type="button" class="mode-option" data-single-killer="true">
+                        <h3>Single Killer</h3>
+                        <p>No upgrades, no rerolls. Pick one killer and run them from the first hunt to the last.</p>
+                    </button>
+                </div>
+
+                <div class="killer-picker" hidden>
+                    <label for="single-killer-select" class="sheet-label">Pick your killer</label>
+                    <select id="single-killer-select" class="killer-select">
+                        {KILLER_LADDER.map((killer, index) => (
+                            <option value={index}>{killer.display_name} ({killer.tier}-tier)</option>
+                        ))}
+                    </select>
+                    <button type="button" class="buy-button killer-picker-confirm">Confirm Killer</button>
+                </div>
+            </div>
+
+            <div class="mode-gate-step" data-step="2" hidden>
+                <h2 class="rye-regular">Choose Your Perks</h2>
+                <div class="mode-options">
+                    <button type="button" class="mode-option" data-perk-mode="normal">
+                        <h3>Open Shop</h3>
+                        <p>Buy a roll from any tier at any time, as long as you can afford it.</p>
+                    </button>
+                    <button type="button" class="mode-option" data-perk-mode="progression">
+                        <h3>Earned Tiers</h3>
+                        <p>Start on F-tier only. Buy 4 perks of a tier to unlock the next, all the way up to S.</p>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mode-gate-step" data-step="3" hidden>
+                <h2 class="rye-regular">Choose Your Hunt</h2>
+                <div class="mode-options">
+                    <button type="button" class="mode-option" data-game-mode="sheriff">
+                        <h3>The Sheriff's List</h3>
+                        <p>Hunt every survivor on the bounty board. Legendary skins count as their original character, so claiming the character's bounty clears all of their legendary reskins.</p>
+                    </button>
+                    <button type="button" class="mode-option" data-game-mode="blacklist">
+                        <h3>The Black List</h3>
+                        <p>Every name. Every face. Every legendary reskin. Each character and every legendary variant must be hunted before the bounty board can be cleared.</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</mode-select-gate>
+
+<script>
+    import { getGameMode, startRun, type GameMode, type PerkMode } from "../stores/points";
+
+    customElements.define("mode-select-gate", class extends HTMLElement {
+        step = 1;
+        singleKillerMode = false;
+        chosenKillerIndex = 0;
+        perkMode: PerkMode = "normal";
+
+        connectedCallback() {
+            const overlay = this.querySelector<HTMLElement>(".mode-gate-overlay");
+
+            if (getGameMode()) {
+                this.remove();
+                return;
+            }
+
+            overlay?.removeAttribute("hidden");
+            this.render();
+
+            this.querySelectorAll<HTMLButtonElement>("[data-single-killer]").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const isSingle = btn.dataset.singleKiller === "true";
+                    this.singleKillerMode = isSingle;
+
+                    if (isSingle) {
+                        this.querySelector(".killer-picker")?.removeAttribute("hidden");
+                        return;
+                    }
+
+                    this.step = 2;
+                    this.render();
+                });
+            });
+
+            this.querySelector(".killer-picker-confirm")?.addEventListener("click", () => {
+                const select = this.querySelector<HTMLSelectElement>("#single-killer-select");
+                this.chosenKillerIndex = Number(select?.value ?? 0);
+                this.step = 2;
+                this.render();
+            });
+
+            this.querySelectorAll<HTMLButtonElement>("[data-perk-mode]").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    this.perkMode = btn.dataset.perkMode === "progression" ? "progression" : "normal";
+                    this.step = 3;
+                    this.render();
+                });
+            });
+
+            this.querySelectorAll<HTMLButtonElement>("[data-game-mode]").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const mode = btn.dataset.gameMode as GameMode;
+                    if (mode !== "sheriff" && mode !== "blacklist") return;
+
+                    startRun({
+                        singleKillerMode: this.singleKillerMode,
+                        perkMode: this.perkMode,
+                        gameMode: mode,
+                        killerIndex: this.singleKillerMode ? this.chosenKillerIndex : undefined,
+                    });
+                    window.location.reload();
+                });
+            });
+        }
+
+        render() {
+            this.querySelectorAll<HTMLElement>(".mode-gate-step").forEach((el) => {
+                el.hidden = Number(el.dataset.step) !== this.step;
+            });
+            this.querySelectorAll<HTMLElement>(".mode-gate-dot").forEach((el) => {
+                el.classList.toggle("is-active", Number(el.dataset.dot) === this.step);
+            });
+        }
+    });
+</script>

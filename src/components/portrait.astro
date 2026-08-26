@@ -1,11 +1,17 @@
 ---
-const { img = "", name = "", points = 0, correspondingCharacter = "" } = Astro.props;
+const {
+    img = "",
+    name = "",
+    points = 0,
+    correspondingCharacter = "",
+    hideUntilMainBountyClaimed = false,
+} = Astro.props;
 import '../styles/character_portrait.css'
 import sacrificed from '../icons/sacrificed.webp'
 import { Image } from 'astro:assets';
 ---
 
-<wanted-card data-corresponding={correspondingCharacter}>
+<wanted-card data-corresponding={correspondingCharacter} data-hide-until-claimed={hideUntilMainBountyClaimed ? "1" : ""}>
     <div class="wanted-card" data-points={points}>
         <Image class="wanted_character" src={img} alt={name} loading="lazy" />
 
@@ -34,12 +40,9 @@ import { Image } from 'astro:assets';
 
             const name = card.querySelector<HTMLHeadingElement>(".survivor-name")?.textContent ?? "";
             const correspondingCharacter = this.dataset.corresponding || "";
+            const hideUntilClaimed = this.dataset.hideUntilClaimed === "1";
             const reward = Number(card.dataset.points);
 
-            // In normal mode, a legendary skin shares its
-            // kill counter with its original character — hunting either one
-            // marks both as claimed, and no extra bounty stacks for the group.
-            // In hardcore mode, every card tracks itself.
             const groupKey =
                 getGameMode() === "sheriff" && correspondingCharacter
                     ? correspondingCharacter
@@ -52,13 +55,14 @@ import { Image } from 'astro:assets';
                 badge.style.display = kills > 0 ? "flex" : "none";
                 undoBtn.style.display = kills > 0 ? "flex" : "none";
                 card.classList.toggle("is-sacrificed", kills > 0);
+
+                if (hideUntilClaimed) {
+                    this.hidden = !appStorage.get().mainBountyClaimed;
+                }
             };
 
-            // Restore state after page load
             render();
 
-            // Each click on the card counts as another sacrifice — survivors
-            // can be hunted down more than once, and every kill pays out.
             card.addEventListener("click", () => {
                 kills += 1;
                 setWantedCardKills(groupKey, kills);
@@ -66,8 +70,6 @@ import { Image } from 'astro:assets';
                 render();
             });
 
-            // Small undo control for misclicks, tucked in the corner so it
-            // doesn't fight with the "add a kill" click on the rest of the card.
             undoBtn.addEventListener("click", (event) => {
                 event.stopPropagation();
 
@@ -79,15 +81,12 @@ import { Image } from 'astro:assets';
                 render();
             });
 
-            // Another card sharing this groupKey (e.g. a legendary skin and
-            // its base character in Sheriff's List mode) may change the
-            // count from elsewhere on the page — stay in sync with it.
             this.unsubscribe = appStorage.listen((state) => {
                 const latest = state.wantedCards[groupKey] ?? 0;
                 if (latest !== kills) {
                     kills = latest;
-                    render();
                 }
+                render();
             });
         }
 

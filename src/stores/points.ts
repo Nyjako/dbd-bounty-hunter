@@ -1,14 +1,14 @@
 import { atom } from "nanostores";
-import { PERKS_TIERS, KILLER_LADDER } from "../data/data_storage";
+import { PERKS_TIERS, KILLER_LADDER, CHARACTER_TIERS } from "../data/data_storage";
 
-// Types for inventory system
+const MAIN_BOUNTY = CHARACTER_TIERS.MAIN_BOUNTY;
+
 interface InventoryItem {
     id: string;
     name: string;
     description: string;
     price: number;
     category?: "perk" | "add-on" | "killer";
-    // Only set on category: "perk" items — which PERKS_TIERS bucket to roll from.
     perkTier?: keyof typeof PERKS_TIERS;
 }
 
@@ -18,6 +18,7 @@ export interface EquippedPerk {
 }
 
 export type GameMode = "sheriff" | "blacklist";
+export type PerkMode = "normal" | "progression";
 
 const STORAGE_KEY = "game-storage";
 
@@ -28,11 +29,7 @@ function readStoredState(): Partial<AppStorage> {
 
     try {
         const saved = window.localStorage.getItem(STORAGE_KEY);
-
-        if (!saved) {
-            return {};
-        }
-
+        if (!saved) return {};
         return JSON.parse(saved);
     } catch {
         return {};
@@ -83,7 +80,6 @@ const initialInventory: InventoryItem[] = [
         category: "perk",
         perkTier: "S",
     },
-
     {
         id: "killer-upgrade",
         name: "Killer Upgrade",
@@ -99,7 +95,6 @@ const initialInventory: InventoryItem[] = [
         price: 0,
         category: "killer",
     },
-
     {
         id: "add-on",
         name: "Add-on upgrade",
@@ -110,7 +105,6 @@ const initialInventory: InventoryItem[] = [
     },
 ];
 
-// Add-on slot rarity ladder, and the colors used to badge each tier.
 export const ADDON_TIERS = ["None", "Brown", "Green", "Blue", "Purple", "Iridescent"] as const;
 export const ADDON_TIER_COLORS: Record<(typeof ADDON_TIERS)[number], string> = {
     None: "#7a7f85",
@@ -121,28 +115,27 @@ export const ADDON_TIER_COLORS: Record<(typeof ADDON_TIERS)[number], string> = {
     Iridescent: "#d6336c",
 };
 
+// Perk progression mode order — 4 purchases of one tier unlocks the next.
+export const PERK_TIER_ORDER: (keyof typeof PERKS_TIERS)[] = ["F", "D", "C", "A", "S"];
+export const PERK_TIER_UNLOCK_COUNT = 4;
+
 const PERK_SLOT_COUNT = 4;
 const ADDON_SLOT_COUNT = 2;
 
-// Store state
 export interface AppStorage {
     points: number;
     inventory: InventoryItem[];
     wantedCards: Record<string, number>;
-    // Index into KILLER_LADDER — the killer currently being played.
     killerIndex: number;
-    // Once true (set the first time killerIndex reaches the top of the
-    // ladder), stays true for the rest of the run — every future killer
-    // "upgrade" purchase is a reroll to a random killer, even though a
-    // reroll's resulting killerIndex usually isn't the max index anymore.
     reachedMaxKiller: boolean;
     perkSlots: (EquippedPerk | null)[];
     addonSlots: number[];
-    // A perk that's been rolled (and paid for) but not placed in a slot yet.
-    // Persisted so a reload doesn't lose it before the player picks a slot.
     pendingPerk: EquippedPerk | null;
-    // Chosen once at the start of a run; null means "not chosen yet".
     gameMode: GameMode | null;
+    singleKillerMode: boolean;
+    perkMode: PerkMode;
+    perkTierPurchaseCounts: Record<string, number>;
+    mainBountyClaimed: boolean;
 }
 
 function normalizePerkSlots(raw: unknown): (EquippedPerk | null)[] {
@@ -185,11 +178,25 @@ function normalizeKillerIndex(raw: unknown): number {
     return n;
 }
 
+function normalizePerkTierPurchaseCounts(raw: unknown): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const tier of PERK_TIER_ORDER) counts[tier] = 0;
+
+    if (raw && typeof raw === "object") {
+        for (const tier of PERK_TIER_ORDER) {
+            const value = (raw as Record<string, unknown>)[tier];
+            if (typeof value === "number" && Number.isFinite(value)) {
+                counts[tier] = Math.max(0, value);
+            }
+        }
+    }
+
+    return counts;
+}
+
 function buildInitialState(saved: Partial<AppStorage>): AppStorage {
     return {
         points: saved.points ?? 0,
-        // The catalog itself is static and code-defined — always start fresh
-        // from here rather than trusting a possibly-stale saved shape.
         inventory: initialInventory,
         wantedCards: saved.wantedCards ?? {},
         killerIndex: normalizeKillerIndex(saved.killerIndex),
@@ -198,68 +205,53 @@ function buildInitialState(saved: Partial<AppStorage>): AppStorage {
         addonSlots: normalizeAddonSlots(saved.addonSlots),
         pendingPerk: saved.pendingPerk ?? null,
         gameMode: saved.gameMode === "sheriff" || saved.gameMode === "blacklist" ? saved.gameMode : null,
+        singleKillerMode: saved.singleKillerMode === true,
+        perkMode: saved.perkMode === "progression" ? "progression" : "normal",
+        perkTierPurchaseCounts: normalizePerkTierPurchaseCounts(saved.perkTierPurchaseCounts),
+        mainBountyClaimed: saved.mainBountyClaimed === true,
     };
 }
 
-// Main store with TypeScript typing
 export const appStorage = atom<AppStorage>(buildInitialState(savedState));
 
-// Point management functions
 export function setPoints(value: number) {
-    const newState = {
-        ...appStorage.get(),
-        points: value,
-    };
-
+    const newState = { ...appStorage.get(), points: value };
     appStorage.set(newState);
-
     saveState(newState);
 }
 
 export function addPoints(amount: number) {
-    const currentState = appStorage.get();
-    setPoints(currentState.points + amount);
+    setPoints(appStorage.get().points + amount);
 }
 
 export function getPoints() {
     return appStorage.get().points;
 }
 
-// Inventory management functions
 export function getInventory() {
     return appStorage.get().inventory;
 }
 
-export function updateInventoryItem(
-    id: string,
-    updates: Partial<InventoryItem>,
-) {
+export function updateInventoryItem(id: string, updates: Partial<InventoryItem>) {
     const currentState = appStorage.get();
-
     const newState = {
         ...currentState,
-        inventory: currentState.inventory.map((item) =>
-            item.id === id ? { ...item, ...updates } : item,
-        ),
+        inventory: currentState.inventory.map((item) => (item.id === id ? { ...item, ...updates } : item)),
     };
-
     appStorage.set(newState);
     saveState(newState);
 }
 
 export function removeInventoryItem(id: string) {
     const currentState = appStorage.get();
-
     const newState = {
         ...currentState,
         inventory: currentState.inventory.filter((item) => item.id !== id),
     };
-
     appStorage.set(newState);
     saveState(newState);
 }
 
-// Helper to check if player can afford an item
 export function canAffordItem(itemId: string): boolean {
     const currentState = appStorage.get();
     const item = currentState.inventory.find((item) => item.id === itemId);
@@ -270,13 +262,37 @@ export function canAffordAddonUpgrade(): boolean {
     return canAffordItem("add-on");
 }
 
-// ---------- game mode ----------
+// ---------- run setup (chosen once, before the first visit to the board) ----------
 export function getGameMode() {
     return appStorage.get().gameMode;
 }
 
-export function setGameMode(mode: GameMode) {
-    const newState: AppStorage = { ...appStorage.get(), gameMode: mode };
+export function isSingleKillerMode() {
+    return appStorage.get().singleKillerMode;
+}
+
+export function getPerkMode() {
+    return appStorage.get().perkMode;
+}
+
+// Commits all run-setup choices in one go and persists them.
+export function startRun(options: {
+    singleKillerMode: boolean;
+    perkMode: PerkMode;
+    gameMode: GameMode;
+    killerIndex?: number;
+}) {
+    const currentState = appStorage.get();
+    const newState: AppStorage = {
+        ...currentState,
+        singleKillerMode: options.singleKillerMode,
+        perkMode: options.perkMode,
+        gameMode: options.gameMode,
+        killerIndex:
+            options.killerIndex !== undefined
+                ? normalizeKillerIndex(options.killerIndex)
+                : currentState.killerIndex,
+    };
     appStorage.set(newState);
     saveState(newState);
 }
@@ -316,13 +332,22 @@ export function getPendingPerk() {
     return appStorage.get().pendingPerk;
 }
 
-// Picks a random, not-currently-equipped perk from the given tier.
-// Returns null if every perk in that tier is already equipped (rare, but
-// possible on the smallest tiers).
-function rollPerkForTier(
-    tier: keyof typeof PERKS_TIERS,
-    currentSlots: (EquippedPerk | null)[],
-): string | null {
+// ---------- perk progression ----------
+export function getPerkTierPurchaseCounts() {
+    return appStorage.get().perkTierPurchaseCounts;
+}
+
+export function isPerkTierUnlocked(tier: string, state: AppStorage = appStorage.get()): boolean {
+    if (state.perkMode === "normal") return true;
+
+    const index = PERK_TIER_ORDER.indexOf(tier as (typeof PERK_TIER_ORDER)[number]);
+    if (index <= 0) return true;
+
+    const previousTier = PERK_TIER_ORDER[index - 1];
+    return (state.perkTierPurchaseCounts[previousTier] ?? 0) >= PERK_TIER_UNLOCK_COUNT;
+}
+
+function rollPerkForTier(tier: keyof typeof PERKS_TIERS, currentSlots: (EquippedPerk | null)[]): string | null {
     const pool = PERKS_TIERS[tier] ?? [];
     const equippedNames = new Set(currentSlots.filter(Boolean).map((s) => s!.name));
     const available = pool.filter((name) => !equippedNames.has(name));
@@ -332,8 +357,6 @@ function rollPerkForTier(
     return available[Math.floor(Math.random() * available.length)];
 }
 
-// Helper to purchase a "perk" or "killer" item. Add-on purchases go through
-// purchaseAddonUpgrade() instead, since they need a target slot.
 export function purchaseItem(itemId: string): boolean {
     const currentState = appStorage.get();
     const item = currentState.inventory.find((item) => item.id === itemId);
@@ -346,38 +369,39 @@ export function purchaseItem(itemId: string): boolean {
     };
 
     if (item.category === "killer") {
+        if (currentState.singleKillerMode) return false;
+
         if (currentState.reachedMaxKiller) {
-            // Already hit the top of the ladder at some point this run —
-            // every subsequent "upgrade" stays a reroll, even though the
-            // killer we land on usually won't be the max index anymore.
             patch.killerIndex = pickRandomKillerIndex(currentState.killerIndex);
         } else {
             const nextIndex = Math.min(currentState.killerIndex + 1, KILLER_LADDER.length - 1);
             patch.killerIndex = nextIndex;
-
             if (nextIndex >= KILLER_LADDER.length - 1) {
                 patch.reachedMaxKiller = true;
             }
         }
     } else if (item.category === "perk") {
         if (!item.perkTier) return false;
+        if (currentState.pendingPerk) return false;
+        if (!isPerkTierUnlocked(item.perkTier, currentState)) return false;
 
         const rolled = rollPerkForTier(item.perkTier, currentState.perkSlots);
-        if (!rolled) return false; // every perk in this tier is already equipped
+        if (!rolled) return false;
 
         patch.pendingPerk = { name: rolled, tier: item.perkTier };
+        patch.perkTierPurchaseCounts = {
+            ...currentState.perkTierPurchaseCounts,
+            [item.perkTier]: (currentState.perkTierPurchaseCounts[item.perkTier] ?? 0) + 1,
+        };
     }
 
     const newState = { ...currentState, ...patch };
-
     appStorage.set(newState);
     saveState(newState);
 
     return true;
 }
 
-// Place a rolled (pending) perk into one of the 4 slots, permanently
-// replacing whatever was equipped there before.
 export function equipPendingPerk(slotIndex: number): boolean {
     const currentState = appStorage.get();
     const pending = currentState.pendingPerk;
@@ -388,19 +412,13 @@ export function equipPendingPerk(slotIndex: number): boolean {
     const perkSlots = [...currentState.perkSlots];
     perkSlots[slotIndex] = pending;
 
-    const newState: AppStorage = {
-        ...currentState,
-        perkSlots,
-        pendingPerk: null,
-    };
-
+    const newState: AppStorage = { ...currentState, perkSlots, pendingPerk: null };
     appStorage.set(newState);
     saveState(newState);
 
     return true;
 }
 
-// Buy an add-on upgrade for a specific slot, bumping its rarity tier by one.
 export function purchaseAddonUpgrade(slotIndex: number): boolean {
     const currentState = appStorage.get();
     const item = currentState.inventory.find((i) => i.category === "add-on");
@@ -418,20 +436,32 @@ export function purchaseAddonUpgrade(slotIndex: number): boolean {
         points: currentState.points - item.price,
         addonSlots,
     };
-
     appStorage.set(newState);
     saveState(newState);
 
     return true;
 }
 
-// Wipes every bit of run progress — points, kills, killer, perks, add-ons,
-// and the chosen game mode. Does NOT reload the page; callers should do
-// that themselves so every component (which only reads state on load)
-// starts clean.
+// ---------- main bounty ----------
+// A flat, one-per-run bounty. Toggling it off again (undoing a misclick)
+// reverses both the points and the claimed flag.
+export function toggleMainBounty(): { claimed: boolean; delta: number } {
+    const currentState = appStorage.get();
+    const claimed = !currentState.mainBountyClaimed;
+
+    const newState: AppStorage = { ...currentState, mainBountyClaimed: claimed };
+    appStorage.set(newState);
+    saveState(newState);
+
+    return { claimed, delta: claimed ? MAIN_BOUNTY.worth : -MAIN_BOUNTY.worth };
+}
+
+export function isMainBountyClaimed() {
+    return appStorage.get().mainBountyClaimed;
+}
+
 export function resetProgress() {
     const freshState = buildInitialState({});
-
     appStorage.set(freshState);
 
     if (typeof window !== "undefined" && window.localStorage) {
@@ -443,18 +473,11 @@ export function resetProgress() {
     }
 }
 
-// Serializes the current save to a JSON string the player can download.
-// Same shape as what's persisted to localStorage (no inventory — that's
-// a static, code-defined catalog, not part of anyone's save).
 export function exportSave(): string {
     const { inventory, ...persisted } = appStorage.get();
     return JSON.stringify(persisted, null, 2);
 }
 
-// Loads a save from a JSON string (as produced by exportSave). Reuses
-// buildInitialState's normalization, so a partial, older-shaped, or
-// slightly malformed save falls back to sane defaults per-field instead
-// of crashing. Does NOT reload the page; callers should do that themselves.
 export function importSave(json: string): { success: boolean; error?: string } {
     let parsed: unknown;
 
@@ -469,7 +492,6 @@ export function importSave(json: string): { success: boolean; error?: string } {
     }
 
     const freshState = buildInitialState(parsed as Partial<AppStorage>);
-
     appStorage.set(freshState);
     saveState(freshState);
 
@@ -477,12 +499,9 @@ export function importSave(json: string): { success: boolean; error?: string } {
 }
 
 function saveState(state: AppStorage) {
-    if (typeof window === "undefined" || !window.localStorage) {
-        return;
-    }
+    if (typeof window === "undefined" || !window.localStorage) return;
 
     try {
-        // The inventory catalog is static and code-defined — no need to persist it.
         const { inventory, ...persisted } = state;
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
     } catch {
@@ -490,31 +509,18 @@ function saveState(state: AppStorage) {
     }
 }
 
-// Number of times a given survivor (or, in Sheriff's List mode, a whole
-// legendary-skin group sharing one canonical name) has been sacrificed.
-// (Older saves stored a boolean here; coerce those to 0/1 so existing
-// progress doesn't get wiped out.)
 export function getWantedCardKills(name: string): number {
     const raw = appStorage.get().wantedCards[name];
-
-    if (typeof raw === "boolean") {
-        return raw ? 1 : 0;
-    }
-
+    if (typeof raw === "boolean") return raw ? 1 : 0;
     return raw ?? 0;
 }
 
 export function setWantedCardKills(name: string, value: number) {
     const currentState = appStorage.get();
-
     const newState = {
         ...currentState,
-        wantedCards: {
-            ...currentState.wantedCards,
-            [name]: Math.max(0, value),
-        },
+        wantedCards: { ...currentState.wantedCards, [name]: Math.max(0, value) },
     };
-
     appStorage.set(newState);
     saveState(newState);
 }

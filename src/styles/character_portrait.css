@@ -187,6 +187,54 @@
     color: var(--ash-light);
 }
 
+/* ---------- MAIN BOUNTY ---------- */
+.main-bounty-grid {
+    max-width: 220px;
+}
+.main-bounty-card {
+    border-color: var(--rust);
+    box-shadow: 0 0 0 1px rgba(181, 101, 29, 0.3), 0 20px 40px -20px rgba(181, 101, 29, 0.4);
+}
+.main-bounty-ribbon {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fog);
+    background: var(--rust);
+    border-radius: 3px;
+    padding: 3px 7px;
+}
+.main-bounty-x {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 68%;
+    height: auto;
+    z-index: 3;
+    display: none;
+    filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.7));
+}
+.main-bounty-card.is-claimed {
+    border-color: var(--blood);
+    box-shadow: none;
+}
+.main-bounty-card.is-claimed .wanted_character {
+    filter: grayscale(95%) contrast(110%) brightness(50%);
+}
+.main-bounty-card.is-claimed .main-bounty-x {
+    display: block;
+}
+.main-bounty-card.is-claimed .main-bounty-ribbon {
+    background: var(--blood);
+}
+
 /* ---------- VICTORY OVERLAY ---------- */
 hunt-progress {
     display: block;

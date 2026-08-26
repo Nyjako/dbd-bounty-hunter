@@ -1,0 +1,148 @@
+---
+import "../styles/points_display.css";
+import changelogRaw from "../../Changelogs.md?raw";
+---
+
+<button type="button" id="changelog-help-button" class="changelog-help-button" aria-label="View changelog">📜</button>
+
+<changelog-viewer>
+    <script type="text/plain" id="changelog-raw-text" set:html={changelogRaw} />
+    <div class="changelog-overlay" hidden>
+        <div class="changelog-content">
+            <button type="button" class="close-button changelog-close" aria-label="Close changelog">X</button>
+            <h2 class="rye-regular">What's New</h2>
+            <div class="changelog-entries"></div>
+        </div>
+    </div>
+</changelog-viewer>
+
+<script>
+    import { getLastSeenChangelogVersion, setLastSeenChangelogVersion } from "../lib/changelog-seen";
+
+    interface ChangelogEntry {
+        title: string;
+        lines: string[];
+    }
+
+    function parseChangelog(raw: string): ChangelogEntry[] {
+        const entries: ChangelogEntry[] = [];
+        let current: ChangelogEntry | null = null;
+
+        for (const line of raw.split(/\r?\n/)) {
+            if (line.startsWith("# ")) {
+                if (current) entries.push(current);
+                current = { title: line.slice(2).trim(), lines: [] };
+            } else if (current) {
+                current.lines.push(line);
+            }
+        }
+        if (current) entries.push(current);
+
+        return entries;
+    }
+
+    function escapeHtml(s: string): string {
+        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function renderEntryBody(lines: string[]): string {
+        let html = "";
+        let inList = false;
+
+        const closeList = () => {
+            if (inList) {
+                html += "</ul>";
+                inList = false;
+            }
+        };
+
+        for (const raw of lines) {
+            const line = raw.trim();
+
+            if (!line) {
+                closeList();
+                continue;
+            }
+            if (line.startsWith("### ")) {
+                closeList();
+                html += `<h4>${escapeHtml(line.slice(4))}</h4>`;
+            } else if (line.startsWith("## ")) {
+                closeList();
+                html += `<h3>${escapeHtml(line.slice(3))}</h3>`;
+            } else if (/^[*-]\s+/.test(line)) {
+                if (!inList) {
+                    html += "<ul>";
+                    inList = true;
+                }
+                html += `<li>${escapeHtml(line.replace(/^[*-]\s+/, ""))}</li>`;
+            } else if (/^`.*`$/.test(line)) {
+                closeList();
+                html += `<p class="changelog-note">${escapeHtml(line.slice(1, -1))}</p>`;
+            } else {
+                closeList();
+                html += `<p>${escapeHtml(line)}</p>`;
+            }
+        }
+        closeList();
+
+        return html;
+    }
+
+    function renderEntries(container: HTMLElement, entries: ChangelogEntry[]) {
+        container.innerHTML = entries
+            .map(
+                (entry) => `
+                    <article class="changelog-entry">
+                        <h3 class="changelog-version rye-regular">${escapeHtml(entry.title)}</h3>
+                        ${renderEntryBody(entry.lines)}
+                    </article>
+                `,
+            )
+            .join("");
+    }
+
+    customElements.define("changelog-viewer", class extends HTMLElement {
+        connectedCallback() {
+            const overlay = this.querySelector<HTMLElement>(".changelog-overlay");
+            const entriesContainer = this.querySelector<HTMLElement>(".changelog-entries");
+            const rawText = this.querySelector<HTMLScriptElement>("#changelog-raw-text")?.textContent ?? "";
+
+            if (!overlay || !entriesContainer) return;
+
+            const entries = parseChangelog(rawText);
+            if (entries.length === 0) return;
+
+            const latestTitle = entries[0].title;
+            const lastSeen = getLastSeenChangelogVersion();
+
+            const close = () => {
+                setLastSeenChangelogVersion(latestTitle);
+                overlay.hidden = true;
+            };
+
+            this.querySelector(".changelog-close")?.addEventListener("click", close);
+            overlay.addEventListener("click", (e) => {
+                if (e.target === overlay) close();
+            });
+
+            document.querySelector("#changelog-help-button")?.addEventListener("click", () => {
+                renderEntries(entriesContainer, entries);
+                overlay.hidden = false;
+            });
+
+            if (lastSeen === null) {
+                renderEntries(entriesContainer, entries);
+                overlay.hidden = false;
+                return;
+            }
+
+            if (lastSeen !== latestTitle) {
+                const seenIndex = entries.findIndex((e) => e.title === lastSeen);
+                const freshEntries = seenIndex === -1 ? entries.slice(0, 1) : entries.slice(0, seenIndex);
+
+                renderEntries(entriesContainer, freshEntries.length > 0 ? freshEntries : entries.slice(0, 1));
+                overlay.hidden = false;
+            }
+        }
+    });
+</script>

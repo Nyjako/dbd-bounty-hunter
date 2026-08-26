@@ -1,0 +1,114 @@
+---
+import "../styles/points_display.css";
+---
+
+<button type="button" id="tutorial-help-button" class="tutorial-help-button" aria-label="How to play">?</button>
+
+<tutorial-guide>
+    <div class="tutorial-overlay" hidden>
+        <div class="tutorial-content">
+            <div class="tutorial-progress">
+                <span class="tutorial-dot" data-dot="1"></span>
+                <span class="tutorial-dot" data-dot="2"></span>
+                <span class="tutorial-dot" data-dot="3"></span>
+                <span class="tutorial-dot" data-dot="4"></span>
+                <span class="tutorial-dot" data-dot="5"></span>
+            </div>
+
+            <div class="tutorial-step" data-step="1">
+                <h2 class="rye-regular">Welcome, Hunter</h2>
+                <p>This board lists every survivor still walking free. Click a portrait to log a kill — click again to log another, since a survivor can be hunted more than once. The skull badge shows a running count (clicking it undoes a misclick).</p>
+            </div>
+            <div class="tutorial-step" data-step="2" hidden>
+                <h2 class="rye-regular">Bounty Points</h2>
+                <p>Every kill pays Bounty Points based on the survivor's tier. Tap the points pill in the top right corner any time to open the Outlaw's General Store and spend what you've earned.</p>
+            </div>
+            <div class="tutorial-step" data-step="3" hidden>
+                <h2 class="rye-regular">The Character Sheet</h2>
+                <p>Inside the store, your Character Sheet shows your current killer, your perk slots, and your add-on slots. Perk purchases are random — you choose which slot the roll goes into, permanently replacing whatever was equipped there.</p>
+            </div>
+            <div class="tutorial-step" data-step="4" hidden>
+                <h2 class="rye-regular">Climbing the Ladder</h2>
+                <p>Win two matches in a row with a 3-kill or 4-kill result, then claim the free upgrade to move your killer up the ladder. Once you reach the top, upgrades turn into rerolls — a random new killer to run instead.</p>
+            </div>
+            <div class="tutorial-step" data-step="5" hidden>
+                <h2 class="rye-regular">The Danger Zone</h2>
+                <p>Need a clean slate? Delete All Progress wipes everything. Want to back up your save? Export and Import Save live right there too, inside the store.</p>
+            </div>
+
+            <div class="tutorial-actions">
+                <button type="button" class="tutorial-skip">Skip</button>
+                <div class="tutorial-nav">
+                    <button type="button" class="tutorial-back" hidden>Back</button>
+                    <button type="button" class="tutorial-next">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</tutorial-guide>
+
+<script>
+    import { getGameMode } from "../stores/points";
+    import { hasSeenTutorial, markTutorialSeen } from "../lib/tutorial";
+
+    customElements.define("tutorial-guide", class extends HTMLElement {
+        step = 1;
+        totalSteps = 5;
+        overlay: HTMLElement | null = null;
+
+        connectedCallback() {
+            this.overlay = this.querySelector<HTMLElement>(".tutorial-overlay");
+            if (!this.overlay) return;
+
+            this.querySelector(".tutorial-next")?.addEventListener("click", () => {
+                if (this.step >= this.totalSteps) {
+                    this.finish();
+                    return;
+                }
+                this.step += 1;
+                this.render();
+            });
+
+            this.querySelector(".tutorial-back")?.addEventListener("click", () => {
+                this.step = Math.max(1, this.step - 1);
+                this.render();
+            });
+
+            this.querySelector(".tutorial-skip")?.addEventListener("click", () => this.finish());
+
+            document.querySelector("#tutorial-help-button")?.addEventListener("click", () => {
+                this.step = 1;
+                this.render();
+                this.overlay?.removeAttribute("hidden");
+            });
+
+            this.render();
+
+            if (!hasSeenTutorial() && getGameMode()) {
+                this.overlay.removeAttribute("hidden");
+            }
+        }
+
+        render() {
+            this.querySelectorAll<HTMLElement>(".tutorial-step").forEach((el) => {
+                el.hidden = Number(el.dataset.step) !== this.step;
+            });
+            this.querySelectorAll<HTMLElement>(".tutorial-dot").forEach((el) => {
+                el.classList.toggle("is-active", Number(el.dataset.dot) === this.step);
+            });
+
+            const backBtn = this.querySelector<HTMLButtonElement>(".tutorial-back");
+            if (backBtn) backBtn.hidden = this.step === 1;
+
+            const nextBtn = this.querySelector<HTMLButtonElement>(".tutorial-next");
+            if (nextBtn) nextBtn.textContent = this.step === this.totalSteps ? "Start Hunting" : "Next";
+        }
+
+        finish() {
+            markTutorialSeen();
+            this.overlay?.setAttribute("hidden", "");
+            this.step = 1;
+            this.render();
+        }
+    });
+</script>

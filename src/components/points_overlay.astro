@@ -7,80 +7,17 @@ const { points, inventory } = appStorage.get();
 const addonItem = inventory.find((item) => item.category === "add-on");
 ---
 
-<mode-select-gate>
-    <div class="mode-gate-overlay" hidden>
-        <div class="mode-gate-content">
-            <h2 class="rye-regular">Choose Your Hunt</h2>
-            <div class="mode-options">
-                <button type="button" class="mode-option" data-mode="sheriff">
-                    <h3>The Sheriff's List</h3>
-                    <p>Hunt every survivor on the bounty board. Legendary skins count as their original character, so claiming the character's bounty clears all of their legendary reskins.</p>
-                </button>
-                <button type="button" class="mode-option" data-mode="blacklist">
-                    <h3>The Black List</h3>
-                    <p>Every name. Every face. Every legendary reskin. Each character and every legendary variant must be hunted before the bounty board can be cleared.</p>
-                </button>
-            </div>
-        </div>
-    </div>
-</mode-select-gate>
-
-<tutorial-guide>
-    <div class="tutorial-overlay" hidden>
-        <div class="tutorial-content">
-            <div class="tutorial-progress">
-                <span class="tutorial-dot" data-dot="1"></span>
-                <span class="tutorial-dot" data-dot="2"></span>
-                <span class="tutorial-dot" data-dot="3"></span>
-                <span class="tutorial-dot" data-dot="4"></span>
-                <span class="tutorial-dot" data-dot="5"></span>
-            </div>
-
-            <div class="tutorial-step" data-step="1">
-                <h2 class="rye-regular">Welcome, Hunter</h2>
-                <p>This board lists every survivor still walking free. Click a portrait to log a kill — click again to log another, since a survivor can be hunted more than once. The skull badge shows a running count (Clicking it undoes a misclick).</p>
-            </div>
-            <div class="tutorial-step" data-step="2" hidden>
-                <h2 class="rye-regular">Bounty Points</h2>
-                <p>Every kill pays Bounty Points based on the survivor's tier. Tap the points pill in the top right corner any time to open the Outlaw's General Store and spend what you've earned.</p>
-            </div>
-            <div class="tutorial-step" data-step="3" hidden>
-                <h2 class="rye-regular">The Character Sheet</h2>
-                <p>Inside the store, your Character Sheet shows your current killer, your 4 perk slots, and your 2 add-on slots. Perk purchases are random — you choose which slot the roll goes into, permanently replacing whatever was equipped there.</p>
-            </div>
-            <div class="tutorial-step" data-step="4" hidden>
-                <h2 class="rye-regular">Climbing the Ladder</h2>
-                <p>Win two matches in a row with a 3-kill or 4-kill result, then claim the free upgrade to move your killer up the ladder. Once you reach the top, upgrades turn into rerolls — a random new killer to run instead.</p>
-            </div>
-            <div class="tutorial-step" data-step="5" hidden>
-                <h2 class="rye-regular">The Danger Zone</h2>
-                <p>Need a clean slate? Delete All Progress wipes everything. Want to back up your save? Export and Import Save live right there too, inside the store.</p>
-            </div>
-
-            <div class="tutorial-actions">
-                <button type="button" class="tutorial-skip">Skip</button>
-                <div class="tutorial-nav">
-                    <button type="button" class="tutorial-back" hidden>Back</button>
-                    <button type="button" class="tutorial-next">Next</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</tutorial-guide>
-
 <store-modal data-addon-price={addonItem?.price ?? 0}>
     <div class="modal-overlay" aria-hidden="true">
         <div class="modal-content">
             <button class="close-button" aria-label="Close modal">X</button>
             <h2>Outlaw's General Store</h2>
 
-            <!-- Point Balance Display -->
             <div class="point-balance">
                 <span class="badge">Your Points: </span>
                 <span id="points-display">{points}</span>
             </div>
 
-            <!-- Player / Character Sheet -->
             <section class="player-sheet">
                 <h3>Character Sheet</h3>
 
@@ -105,7 +42,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                 </div>
             </section>
 
-            <!-- Danger Zone -->
             <section class="danger-zone">
                 <h3>Danger Zone</h3>
                 <div class="danger-actions">
@@ -116,7 +52,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                 </div>
             </section>
 
-            <!-- Confirmation Modal (purchases) -->
             <div class="confirmation-modal hidden">
                 <div class="alert-content">
                     <h3>Are ya sure, partner?</h3>
@@ -128,7 +63,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                 </div>
             </div>
 
-            <!-- Reset Confirmation Modal -->
             <div class="confirmation-modal reset-confirm hidden">
                 <div class="alert-content">
                     <h3>Erase the Legend?</h3>
@@ -143,8 +77,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
     </div>
 </store-modal>
 
-<button type="button" id="tutorial-help-button" class="tutorial-help-button" aria-label="How to play">?</button>
-
 <points-display>
     Points: <span class="points-value">0</span>
 </points-display>
@@ -157,11 +89,11 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         equipPendingPerk,
         canAffordItem,
         canAffordAddonUpgrade,
+        isPerkTierUnlocked,
         resetProgress,
         exportSave,
         importSave,
-        setGameMode,
-        getGameMode,
+        PERK_TIER_UNLOCK_COUNT,
         ADDON_TIERS,
         ADDON_TIER_COLORS,
         type AppStorage,
@@ -169,105 +101,16 @@ const addonItem = inventory.find((item) => item.category === "add-on");
     import { getPerkIcon } from "../lib/perk-icons.ts";
     import { characters } from "../data/characters.ts";
     import { KILLER_LADDER } from "../data/data_storage.ts";
-    import { hasSeenTutorial, markTutorialSeen } from "../lib/tutorial.ts";
 
     type PendingPurchase =
         | { kind: "item"; id: string; cost: number }
         | { kind: "addon"; slot: number; cost: number };
-
-    customElements.define("mode-select-gate", class extends HTMLElement {
-        connectedCallback() {
-            const overlay = this.querySelector<HTMLElement>(".mode-gate-overlay");
-
-            if (getGameMode()) {
-                // Already chosen — stays hidden, nothing to wire up.
-                this.remove();
-                return;
-            }
-
-            overlay?.removeAttribute("hidden");
-
-            this.querySelectorAll<HTMLButtonElement>(".mode-option").forEach((btn) => {
-                btn.addEventListener("click", () => {
-                    const mode = btn.dataset.mode;
-                    if (mode !== "sheriff" && mode !== "blacklist") return;
-                    setGameMode(mode);
-                    window.location.reload();
-                });
-            });
-        }
-    });
-
-    customElements.define("tutorial-guide", class extends HTMLElement {
-        step = 1;
-        totalSteps = 5;
-        overlay: HTMLElement | null = null;
-
-        connectedCallback() {
-            this.overlay = this.querySelector<HTMLElement>(".tutorial-overlay");
-            if (!this.overlay) return;
-
-            this.querySelector(".tutorial-next")?.addEventListener("click", () => {
-                if (this.step >= this.totalSteps) {
-                    this.finish();
-                    return;
-                }
-                this.step += 1;
-                this.render();
-            });
-
-            this.querySelector(".tutorial-back")?.addEventListener("click", () => {
-                this.step = Math.max(1, this.step - 1);
-                this.render();
-            });
-
-            this.querySelector(".tutorial-skip")?.addEventListener("click", () => this.finish());
-
-            document.querySelector("#tutorial-help-button")?.addEventListener("click", () => {
-                this.step = 1;
-                this.render();
-                this.overlay?.removeAttribute("hidden");
-            });
-
-            this.render();
-
-            // Auto-show only for first-time visitors, and only once a game
-            // mode has actually been chosen — the mode gate takes priority
-            // on someone's very first visit.
-            if (!hasSeenTutorial() && getGameMode()) {
-                this.overlay.removeAttribute("hidden");
-            }
-        }
-
-        render() {
-            this.querySelectorAll<HTMLElement>(".tutorial-step").forEach((el) => {
-                el.hidden = Number(el.dataset.step) !== this.step;
-            });
-            this.querySelectorAll<HTMLElement>(".tutorial-dot").forEach((el) => {
-                el.classList.toggle("is-active", Number(el.dataset.dot) === this.step);
-            });
-
-            const backBtn = this.querySelector<HTMLButtonElement>(".tutorial-back");
-            if (backBtn) backBtn.hidden = this.step === 1;
-
-            const nextBtn = this.querySelector<HTMLButtonElement>(".tutorial-next");
-            if (nextBtn) nextBtn.textContent = this.step === this.totalSteps ? "Start Hunting" : "Next";
-        }
-
-        finish() {
-            markTutorialSeen();
-            this.overlay?.setAttribute("hidden", "");
-            this.step = 1;
-            this.render();
-        }
-    });
 
     class PointsDisplay extends HTMLElement {
         unsubscribe?: () => void;
 
         connectedCallback() {
             const value = this.querySelector(".points-value");
-
             if (!value) return;
 
             value.textContent = appStorage.get().points.toString();
@@ -298,14 +141,10 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         scrollToPerkSelection() {
             const modalContent = this.querySelector<HTMLElement>(".modal-content");
             const banner = this.querySelector<HTMLElement>("#pending-perk-banner");
-
             if (!modalContent || !banner) return;
 
             requestAnimationFrame(() => {
-                modalContent.scrollTo({
-                    top: banner.offsetTop - 20,
-                    behavior: "smooth",
-                });
+                modalContent.scrollTo({ top: banner.offsetTop - 20, behavior: "smooth" });
             });
         }
 
@@ -330,7 +169,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             this.hideResetModal();
         }
 
-        // ---------- master render ----------
         render(state: AppStorage) {
             this.renderPoints(state);
             this.renderRank(state);
@@ -345,7 +183,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             if (display) display.textContent = state.points.toString();
         }
 
-        // ---------- killer rank ----------
         renderRank(state: AppStorage) {
             const el = this.querySelector("#rank-display");
             if (!el) return;
@@ -365,6 +202,11 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         renderKillerActions(state: AppStorage) {
             const container = this.querySelector<HTMLElement>("#killer-actions");
             if (!container) return;
+
+            if (state.singleKillerMode) {
+                container.innerHTML = `<span class="slot-cta muted">Single Killer mode — no upgrades</span>`;
+                return;
+            }
 
             const maxed = state.reachedMaxKiller;
             const killerItems = state.inventory.filter(
@@ -395,7 +237,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             });
         }
 
-        // ---------- perk slots ----------
         renderPerkSlots(state: AppStorage) {
             const banner = this.querySelector<HTMLElement>("#pending-perk-banner");
             const grid = this.querySelector<HTMLElement>("#perk-slots");
@@ -454,18 +295,44 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             if (!container) return;
 
             const perkItems = state.inventory.filter((i) => i.category === "perk");
+            const blockedByPending = Boolean(state.pendingPerk);
 
             container.innerHTML = perkItems
-                .map(
-                    (item) => `
-                        <button type="button" class="buy-button perk-shop-button" data-id="${item.id}" data-cost="${item.price}">
-                            ${item.perkTier}-Tier — ${item.price} pts
-                        </button>
-                    `,
-                )
+                .map((item) => {
+                    const tier = item.perkTier ?? "";
+                    const unlocked = isPerkTierUnlocked(tier, state);
+
+                    if (blockedByPending) {
+                        return `<button type="button" class="buy-button perk-shop-button" disabled>${tier}-Tier — place your perk first</button>`;
+                    }
+
+                    if (unlocked) {
+                        return `<button type="button" class="buy-button perk-shop-button" data-id="${item.id}" data-cost="${item.price}">${tier}-Tier — ${item.price} pts</button>`;
+                    }
+
+                    return `<button type="button" class="buy-button perk-shop-button" disabled>${tier}-Tier — locked</button>`;
+                })
                 .join("");
 
-            container.querySelectorAll<HTMLButtonElement>(".perk-shop-button").forEach((btn) => {
+            if (!blockedByPending && state.perkMode === "progression") {
+                const progressLine = document.createElement("p");
+                progressLine.className = "perk-progress-note";
+                const nextLocked = state.inventory.find(
+                    (i) => i.category === "perk" && i.perkTier && !isPerkTierUnlocked(i.perkTier, state),
+                );
+                if (nextLocked && nextLocked.perkTier) {
+                    const order = ["F", "D", "C", "A", "S"];
+                    const idx = order.indexOf(nextLocked.perkTier);
+                    const prevTier = idx > 0 ? order[idx - 1] : null;
+                    const count = prevTier ? (state.perkTierPurchaseCounts[prevTier] ?? 0) : 0;
+                    progressLine.textContent = prevTier
+                        ? `Buy ${PERK_TIER_UNLOCK_COUNT - count} more ${prevTier}-tier perk(s) to unlock ${nextLocked.perkTier}-tier.`
+                        : "";
+                }
+                if (progressLine.textContent) container.appendChild(progressLine);
+            }
+
+            container.querySelectorAll<HTMLButtonElement>(".perk-shop-button:not(:disabled)").forEach((btn) => {
                 btn.addEventListener("click", () => {
                     const id = btn.dataset.id!;
                     const cost = Number(btn.dataset.cost ?? "0");
@@ -475,13 +342,11 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             });
         }
 
-        // ---------- addon slots ----------
         renderAddonSlots(state: AppStorage) {
             const grid = this.querySelector<HTMLElement>("#addon-slots");
             if (!grid) return;
 
-            const addonPriceAttr = this.getAttribute("data-addon-price");
-            const addonPrice = Number(addonPriceAttr ?? 0);
+            const addonPrice = Number(this.getAttribute("data-addon-price") ?? 0);
 
             grid.innerHTML = state.addonSlots
                 .map((tierIndex, index) => {
@@ -515,7 +380,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             });
         }
 
-        // ---------- purchase confirmation modal ----------
         showConfirmationModal(cost: number) {
             const amountDisplay = this.querySelector("#confirm-amount");
             if (amountDisplay) amountDisplay.textContent = cost.toString();
@@ -552,14 +416,11 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                 } else if (!success) {
                     this.showAlert(
                         "No Luck, Partner",
-                        "That didn't go through — that tier might be fully claimed already, or the slot's maxed out.",
+                        "That didn't go through — that tier might be fully claimed, locked, or the slot's maxed out.",
                     );
                 } else if (purchase.kind === "item") {
                     const state = appStorage.get();
-
-                    if (state.pendingPerk) {
-                        this.scrollToPerkSelection();
-                    }
+                    if (state.pendingPerk) this.scrollToPerkSelection();
                 }
 
                 this.pendingPurchase = null;
@@ -571,7 +432,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             });
         }
 
-        // ---------- reset confirmation modal ----------
         showResetModal() {
             this.resetConfirmModal?.classList.remove("hidden");
         }
@@ -620,7 +480,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
 
             fileInput?.addEventListener("change", () => {
                 const file = fileInput.files?.[0];
-                fileInput.value = ""; // allow re-selecting the same file later
+                fileInput.value = "";
                 if (!file) return;
 
                 if (
@@ -634,12 +494,10 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                 const reader = new FileReader();
                 reader.onload = () => {
                     const result = importSave(String(reader.result ?? ""));
-
                     if (!result.success) {
                         this.showAlert("Couldn't Read That Save", result.error ?? "Something about that file didn't check out.");
                         return;
                     }
-
                     window.location.reload();
                 };
                 reader.onerror = () => {
