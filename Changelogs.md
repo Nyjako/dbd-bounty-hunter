@@ -1,3 +1,9 @@
+# DBD 10.1.0 Chorus of sin | FIX #1
+
+## Added missing killer
+
+* The Judgment (A)
+
 # DBD 10.1.0 Chorus of sin
 
 ## Changes
@@ -60,7 +66,6 @@ After the Main Bounty is hunted, it moves back to its normal position on the boa
 ## Bug fixes
 
 * Fixed the perk shop letting you buy another perk roll while one you'd already bought was still waiting to be placed in a slot, which could bury a pending perk under a newer one before you ever got to choose where it went. The shop now locks every perk tier (showing "place your perk first") until the pending one is placed.
-
 
 # DBD 10.0.0 Jason
 

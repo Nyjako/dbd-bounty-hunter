@@ -296,6 +296,7 @@ export const KILLER_TIERS = {
         { img_name: "The Singularity", display_name: "The Singularity" },
         { img_name: "The Plague",      display_name: "The Plague"      },
         { img_name: "The Oni",         display_name: "The Oni"         },
+        { img_name: "The Judgment",    display_name: "The Judgment"    },
     ],
     B: [
         { img_name: "The Blight",       display_name: "The Blight"       },
