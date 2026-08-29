@@ -1,5 +1,7 @@
 import { atom } from "nanostores";
 import { PERKS_TIERS, KILLER_LADDER, CHARACTER_TIERS } from "../data/data_storage";
+import { obfuscate, deobfuscate } from "../lib/obfuscate";
+import { appendToChain, verifyRun, GENESIS_HASH, type ReplayResult, type VerifyResult } from "../lib/event-log";
 
 const MAIN_BOUNTY = CHARACTER_TIERS.MAIN_BOUNTY;
 
@@ -22,15 +24,29 @@ export type PerkMode = "normal" | "progression";
 
 const STORAGE_KEY = "game-storage";
 
+// Old saves went through zero, one, or two prior formats: plain JSON,
+// then JS-obfuscated, now WASM-obfuscated. Try deobfuscating (which
+// itself tries WASM then legacy JS) and fall back to plain JSON so
+// nothing written by an earlier version of this site fails to load.
 function readStoredState(): Partial<AppStorage> {
     if (typeof window === "undefined" || !window.localStorage) {
         return {};
     }
 
     try {
-        const saved = window.localStorage.getItem(STORAGE_KEY);
-        if (!saved) return {};
-        return JSON.parse(saved);
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (!raw) return {};
+
+        const deobfuscated = deobfuscate(raw);
+        if (deobfuscated) {
+            try {
+                return JSON.parse(deobfuscated);
+            } catch {
+                // fall through
+            }
+        }
+
+        return JSON.parse(raw);
     } catch {
         return {};
     }
@@ -125,10 +141,6 @@ export interface AppStorage {
     points: number;
     inventory: InventoryItem[];
     wantedCards: Record<string, number>;
-    // The killer's stable img_name, not a ladder position — see
-    // getKillerLadderPosition(). A raw index would silently point at a
-    // different killer whenever KILLER_TIERS gets reordered, added to, or
-    // has a killer moved between tiers.
     killerName: string;
     reachedMaxKiller: boolean;
     perkSlots: (EquippedPerk | null)[];
@@ -139,6 +151,19 @@ export interface AppStorage {
     perkMode: PerkMode;
     perkTierPurchaseCounts: Record<string, number>;
     mainBountyClaimed: boolean;
+    // Whether the player has dismissed the one-time notice explaining
+    // that this save has a legacy baseline (see logBaseline above).
+    // Persisted so it survives export/import along with everything else.
+    legacyNoticeSeen: boolean;
+    eventLog: string[];
+    logHash: string;
+    // Captured once, the moment a save is first seen with an empty
+    // event log — whether that's a brand new save (baseline is a
+    // no-op zero) or one that predates event logging entirely
+    // (baseline captures whatever it already had). Never recomputed
+    // after that, so verification always compares against a fair
+    // starting point instead of assuming everyone started at zero.
+    logBaseline: ReplayResult;
 }
 
 function normalizePerkSlots(raw: unknown): (EquippedPerk | null)[] {
@@ -175,10 +200,6 @@ function normalizeAddonSlots(raw: unknown): number[] {
     return slots;
 }
 
-// Old saves stored a raw ladder index. Migrated once, on first load after
-// this change, using today's ladder — it's the best mapping available, but
-// see getKillerLadderPosition()'s comment for why this can only be a
-// one-time reconciliation, not a permanent fix for roster reordering.
 function normalizeKillerName(raw: unknown, legacyIndex: unknown): string {
     if (typeof raw === "string" && KILLER_LADDER.some((k) => k.img_name === raw)) {
         return raw;
@@ -208,7 +229,53 @@ function normalizePerkTierPurchaseCounts(raw: unknown): Record<string, number> {
     return counts;
 }
 
+function normalizeEventLog(raw: unknown): string[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((entry): entry is string => typeof entry === "string");
+}
+
+function normalizeLogBaseline(
+    saved: Partial<AppStorage>,
+    eventLog: string[],
+): { baseline: ReplayResult; freshlyCaptured: boolean } {
+    if (
+        saved.logBaseline &&
+        typeof saved.logBaseline === "object" &&
+        typeof (saved.logBaseline as ReplayResult).points === "number"
+    ) {
+        const baseline = saved.logBaseline as ReplayResult;
+        return { baseline: { points: baseline.points, wantedCards: baseline.wantedCards ?? {} }, freshlyCaptured: false };
+    }
+
+    if (eventLog.length > 0) {
+        return { baseline: { points: 0, wantedCards: {} }, freshlyCaptured: false };
+    }
+
+    return {
+        baseline: {
+            points: saved.points ?? 0,
+            wantedCards: saved.wantedCards ?? {},
+        },
+        freshlyCaptured: true,
+    };
+}
+
 function buildInitialState(saved: Partial<AppStorage> & { killerIndex?: number }): AppStorage {
+    let eventLog = normalizeEventLog(saved.eventLog);
+    let logHash = typeof saved.logHash === "string" ? saved.logHash : GENESIS_HASH;
+
+    const { baseline, freshlyCaptured } = normalizeLogBaseline(saved, eventLog);
+    const baselineNonTrivial = baseline.points > 0 || Object.keys(baseline.wantedCards).length > 0;
+
+    // A save with real progress but no prior log gets one explicit,
+    // visible marker recording that fact, rather than silently folding
+    // it in — see TRUST_LEGACY_BASELINE in lib/event-log.ts.
+    if (freshlyCaptured && baselineNonTrivial) {
+        const marked = appendToChain(eventLog, logHash, `L:${baseline.points}:${Object.keys(baseline.wantedCards).length}`);
+        eventLog = marked.eventLog;
+        logHash = marked.logHash;
+    }
+
     return {
         points: saved.points ?? 0,
         inventory: initialInventory,
@@ -223,10 +290,34 @@ function buildInitialState(saved: Partial<AppStorage> & { killerIndex?: number }
         perkMode: saved.perkMode === "progression" ? "progression" : "normal",
         perkTierPurchaseCounts: normalizePerkTierPurchaseCounts(saved.perkTierPurchaseCounts),
         mainBountyClaimed: saved.mainBountyClaimed === true,
+        legacyNoticeSeen: saved.legacyNoticeSeen === true,
+        eventLog,
+        logHash,
+        logBaseline: baseline,
     };
 }
 
 export const appStorage = atom<AppStorage>(buildInitialState(savedState));
+
+// ---------- event log ----------
+function withLogEntry(state: AppStorage, code: string, payload: string): Pick<AppStorage, "eventLog" | "logHash"> {
+    return appendToChain(state.eventLog, state.logHash, `${code}:${payload}`);
+}
+
+export function getLogVerification(): VerifyResult {
+    const state = appStorage.get();
+    return verifyRun(state.eventLog, state.logHash, state.logBaseline, state.points, state.wantedCards);
+}
+
+export function hasLegacyNoticeBeenSeen(): boolean {
+    return appStorage.get().legacyNoticeSeen;
+}
+
+export function markLegacyNoticeSeen() {
+    const newState = { ...appStorage.get(), legacyNoticeSeen: true };
+    appStorage.set(newState);
+    saveState(newState);
+}
 
 export function setPoints(value: number) {
     const newState = { ...appStorage.get(), points: value };
@@ -276,7 +367,7 @@ export function canAffordAddonUpgrade(): boolean {
     return canAffordItem("add-on");
 }
 
-// ---------- run setup (chosen once, before the first visit to the board) ----------
+// ---------- run setup ----------
 export function getGameMode() {
     return appStorage.get().gameMode;
 }
@@ -296,15 +387,24 @@ export function startRun(options: {
     killerName?: string;
 }) {
     const currentState = appStorage.get();
+    const killerName =
+        options.killerName && KILLER_LADDER.some((k) => k.img_name === options.killerName)
+            ? options.killerName
+            : currentState.killerName;
+
+    const logPatch = withLogEntry(
+        currentState,
+        "M",
+        `${options.gameMode}:${options.singleKillerMode ? "single" : "free"}:${options.perkMode}:${killerName}`,
+    );
+
     const newState: AppStorage = {
         ...currentState,
         singleKillerMode: options.singleKillerMode,
         perkMode: options.perkMode,
         gameMode: options.gameMode,
-        killerName:
-            options.killerName && KILLER_LADDER.some((k) => k.img_name === options.killerName)
-                ? options.killerName
-                : currentState.killerName,
+        killerName,
+        ...logPatch,
     };
     appStorage.set(newState);
     saveState(newState);
@@ -315,11 +415,6 @@ export function getCurrentKiller() {
     return KILLER_LADDER.find((k) => k.img_name === appStorage.get().killerName) ?? KILLER_LADDER[0];
 }
 
-// Derives a ladder position from the killer's stable name, on demand,
-// instead of storing the position itself. The roster (KILLER_TIERS) can be
-// reordered, added to, or have a killer moved to a different tier at any
-// time — this keeps existing players' actual killer intact through all of
-// that; only their upgrade/reroll *position* is recalculated.
 export function getKillerLadderPosition(name: string = appStorage.get().killerName): number {
     const idx = KILLER_LADDER.findIndex((k) => k.img_name === name);
     return idx === -1 ? 0 : idx;
@@ -391,14 +486,18 @@ export function purchaseItem(itemId: string): boolean {
         if (currentState.singleKillerMode) return false;
 
         if (currentState.reachedMaxKiller) {
-            patch.killerName = pickRandomKillerName(currentState.killerName);
+            const newKiller = pickRandomKillerName(currentState.killerName);
+            patch.killerName = newKiller;
+            Object.assign(patch, withLogEntry(currentState, "R", `${newKiller}:${item.price}`));
         } else {
             const position = getKillerLadderPosition(currentState.killerName);
             const nextPosition = Math.min(position + 1, KILLER_LADDER.length - 1);
-            patch.killerName = KILLER_LADDER[nextPosition].img_name;
+            const newKiller = KILLER_LADDER[nextPosition].img_name;
+            patch.killerName = newKiller;
             if (nextPosition >= KILLER_LADDER.length - 1) {
                 patch.reachedMaxKiller = true;
             }
+            Object.assign(patch, withLogEntry(currentState, "Y", `${newKiller}:${item.price}`));
         }
     } else if (item.category === "perk") {
         if (!item.perkTier) return false;
@@ -413,6 +512,7 @@ export function purchaseItem(itemId: string): boolean {
             ...currentState.perkTierPurchaseCounts,
             [item.perkTier]: (currentState.perkTierPurchaseCounts[item.perkTier] ?? 0) + 1,
         };
+        Object.assign(patch, withLogEntry(currentState, "P", `${item.perkTier}:${rolled}:${item.price}`));
     }
 
     const newState = { ...currentState, ...patch };
@@ -432,7 +532,9 @@ export function equipPendingPerk(slotIndex: number): boolean {
     const perkSlots = [...currentState.perkSlots];
     perkSlots[slotIndex] = pending;
 
-    const newState: AppStorage = { ...currentState, perkSlots, pendingPerk: null };
+    const logPatch = withLogEntry(currentState, "E", `${slotIndex}:${pending.name}:${pending.tier}`);
+
+    const newState: AppStorage = { ...currentState, perkSlots, pendingPerk: null, ...logPatch };
     appStorage.set(newState);
     saveState(newState);
 
@@ -451,10 +553,17 @@ export function purchaseAddonUpgrade(slotIndex: number): boolean {
     const addonSlots = [...currentState.addonSlots];
     addonSlots[slotIndex] += 1;
 
+    const logPatch = withLogEntry(
+        currentState,
+        "A",
+        `${slotIndex}:${ADDON_TIERS[addonSlots[slotIndex]]}:${item.price}`,
+    );
+
     const newState: AppStorage = {
         ...currentState,
         points: currentState.points - item.price,
         addonSlots,
+        ...logPatch,
     };
     appStorage.set(newState);
     saveState(newState);
@@ -463,15 +572,27 @@ export function purchaseAddonUpgrade(slotIndex: number): boolean {
 }
 
 // ---------- main bounty ----------
-export function toggleMainBounty(): { claimed: boolean; delta: number } {
+export function toggleMainBounty(): { claimed: boolean } {
     const currentState = appStorage.get();
     const claimed = !currentState.mainBountyClaimed;
+    const name = MAIN_BOUNTY.survivor;
 
-    const newState: AppStorage = { ...currentState, mainBountyClaimed: claimed };
+    const previousKills = currentState.wantedCards[name] ?? 0;
+    const newKills = Math.max(0, previousKills + (claimed ? 1 : -1));
+
+    const logPatch = withLogEntry(currentState, "B", `${claimed ? "claim" : "undo"}:${name}:${MAIN_BOUNTY.worth}`);
+
+    const newState: AppStorage = {
+        ...currentState,
+        mainBountyClaimed: claimed,
+        points: currentState.points + (claimed ? 1 : -1) * MAIN_BOUNTY.worth,
+        wantedCards: { ...currentState.wantedCards, [name]: newKills },
+        ...logPatch,
+    };
     appStorage.set(newState);
     saveState(newState);
 
-    return { claimed, delta: claimed ? MAIN_BOUNTY.worth : -MAIN_BOUNTY.worth };
+    return { claimed };
 }
 
 export function isMainBountyClaimed() {
@@ -493,23 +614,31 @@ export function resetProgress() {
 
 export function exportSave(): string {
     const { inventory, ...persisted } = appStorage.get();
-    return JSON.stringify(persisted, null, 2);
+    return obfuscate(JSON.stringify(persisted));
 }
 
-export function importSave(json: string): { success: boolean; error?: string } {
-    let parsed: unknown;
+export function importSave(text: string): { success: boolean; error?: string } {
+    let jsonText = deobfuscate(text.trim());
 
+    if (!jsonText) {
+        jsonText = text;
+    }
+
+    let parsed: unknown;
     try {
-        parsed = JSON.parse(json);
+        parsed = JSON.parse(jsonText);
     } catch {
-        return { success: false, error: "That file isn't valid JSON." };
+        return { success: false, error: "That file isn't a save this site produced." };
     }
 
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         return { success: false, error: "That file doesn't look like a save." };
     }
 
-    const freshState = buildInitialState(parsed as Partial<AppStorage>);
+    let freshState = buildInitialState(parsed as Partial<AppStorage>);
+    const logPatch = withLogEntry(freshState, "I", "import");
+    freshState = { ...freshState, ...logPatch };
+
     appStorage.set(freshState);
     saveState(freshState);
 
@@ -521,7 +650,7 @@ function saveState(state: AppStorage) {
 
     try {
         const { inventory, ...persisted } = state;
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+        window.localStorage.setItem(STORAGE_KEY, obfuscate(JSON.stringify(persisted)));
     } catch {
         // storage unavailable
     }
@@ -533,21 +662,49 @@ export function getWantedCardKills(name: string): number {
     return raw ?? 0;
 }
 
+// God mode only: adjusts a kill count directly, with no log entry and no
+// points change. Real gameplay goes through registerKill() instead.
 export function setWantedCardKills(name: string, value: number) {
     const currentState = appStorage.get();
+    const clamped = Math.max(0, value);
+
     const newState = {
         ...currentState,
-        wantedCards: { ...currentState.wantedCards, [name]: Math.max(0, value) },
+        wantedCards: { ...currentState.wantedCards, [name]: clamped },
+    };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+// The one path real gameplay uses to log a kill or an undo: points,
+// wantedCards, and the log entry all move together, so there's no way
+// to update one without the others.
+export function registerKill(name: string, delta: 1 | -1, rewardPerKill: number) {
+    const currentState = appStorage.get();
+    const previous = currentState.wantedCards[name] ?? 0;
+    const newCount = Math.max(0, previous + delta);
+    const actualDelta = newCount - previous;
+
+    if (actualDelta === 0) return;
+
+    const logPatch = withLogEntry(currentState, actualDelta > 0 ? "K" : "U", `${name}:${rewardPerKill}`);
+
+    const newState: AppStorage = {
+        ...currentState,
+        points: currentState.points + actualDelta * rewardPerKill,
+        wantedCards: { ...currentState.wantedCards, [name]: newCount },
+        ...logPatch,
     };
     appStorage.set(newState);
     saveState(newState);
 }
 
 // ---------- god mode ----------
-// Direct state overrides for local testing. Bypasses every normal purchase
-// or unlock rule on purpose. Activation itself is never persisted anywhere
-// (see GodModePanel.astro) — only the resulting values are, indistinguishable
-// from a normal save, exactly like any other state change.
+// Direct state overrides for local testing. None of these write to the
+// event log — that's intentional (see verifyRun in event-log.ts): a
+// change made here shows up later as a mismatch between the log's
+// replayed state and the save's actual state, without needing a
+// separate "god mode was used" marker.
 export function godSetPoints(value: number) {
     setPoints(Math.max(0, Math.floor(value)));
 }
@@ -587,8 +744,9 @@ export function godSetAddonSlot(slotIndex: number, tierIndex: number) {
     const currentState = appStorage.get();
     if (slotIndex < 0 || slotIndex >= currentState.addonSlots.length) return;
 
+    const clamped = Math.max(0, Math.min(ADDON_TIERS.length - 1, tierIndex));
     const addonSlots = [...currentState.addonSlots];
-    addonSlots[slotIndex] = Math.max(0, Math.min(ADDON_TIERS.length - 1, tierIndex));
+    addonSlots[slotIndex] = clamped;
 
     const newState = { ...currentState, addonSlots };
     appStorage.set(newState);

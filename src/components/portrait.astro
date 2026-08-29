@@ -25,7 +25,7 @@ import { Image } from 'astro:assets';
 </wanted-card>
 
 <script>
-    import { addPoints, appStorage, getGameMode, getWantedCardKills, setWantedCardKills } from "../stores/points";
+    import { appStorage, getGameMode, getWantedCardKills, registerKill } from "../stores/points";
 
     class WantedCard extends HTMLElement {
         unsubscribe?: () => void;
@@ -64,9 +64,8 @@ import { Image } from 'astro:assets';
             render();
 
             card.addEventListener("click", () => {
-                kills += 1;
-                setWantedCardKills(groupKey, kills);
-                addPoints(reward);
+                registerKill(groupKey, 1, reward);
+                kills = getWantedCardKills(groupKey);
                 render();
             });
 
@@ -75,9 +74,8 @@ import { Image } from 'astro:assets';
 
                 if (kills <= 0) return;
 
-                kills -= 1;
-                setWantedCardKills(groupKey, kills);
-                addPoints(-reward);
+                registerKill(groupKey, -1, reward);
+                kills = getWantedCardKills(groupKey);
                 render();
             });
 

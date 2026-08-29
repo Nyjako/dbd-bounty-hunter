@@ -16,6 +16,11 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
             <p class="god-mode-hint">Direct state edits. Nothing here is validated against the normal rules.</p>
 
             <div class="god-mode-section">
+                <span class="sheet-label">Event log</span>
+                <div id="god-log-status" class="god-log-status"></div>
+            </div>
+
+            <div class="god-mode-section">
                 <span class="sheet-label">Points</span>
                 <div class="god-mode-row">
                     <input type="number" class="god-mode-input" id="god-points-input" />
@@ -121,15 +126,19 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
         godSetPerkMode,
         godSetMainBountyClaimed,
         setWantedCardKills,
+        getLogVerification,
         type GameMode,
         type PerkMode,
     } from "../stores/points";
 
-    const SEQUENCE = [
-        "ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown",
-        "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight",
-        "KeyB", "KeyA",
-    ];
+    import { chainHash, GENESIS_HASH } from "../lib/event-log";
+
+    // The trigger sequence itself isn't kept as a literal array — only
+    // its hash is. Reading this file won't hand someone the sequence;
+    // they'd need to guess key-code combinations and hash-compare, same
+    // as brute-forcing anything else hashed.
+    const TRIGGER_HASH = "eeefbd945466d423";
+    const TRIGGER_LENGTH = 10;
 
     customElements.define("god-mode-panel", class extends HTMLElement {
         buffer: string[] = [];
@@ -140,11 +149,15 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
 
             document.addEventListener("keydown", (e) => {
                 this.buffer.push(e.code);
-                if (this.buffer.length > SEQUENCE.length) this.buffer.shift();
+                if (this.buffer.length > TRIGGER_LENGTH) this.buffer.shift();
 
-                if (this.buffer.length === SEQUENCE.length && this.buffer.every((k, i) => k === SEQUENCE[i])) {
+                if (
+                    this.buffer.length === TRIGGER_LENGTH &&
+                    chainHash(GENESIS_HASH, this.buffer.join(",")) === TRIGGER_HASH
+                ) {
                     this.buffer = [];
                     this.syncInputs();
+                    this.renderLogStatus();
                     overlay.hidden = !overlay.hidden;
                 }
             });
@@ -154,6 +167,33 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
             });
 
             this.wireControls();
+
+            appStorage.listen(() => {
+                if (!overlay.hidden) {
+                    this.syncInputs();
+                    this.renderLogStatus();
+                }
+            });
+        }
+
+        renderLogStatus() {
+            const el = this.querySelector<HTMLElement>("#god-log-status");
+            if (!el) return;
+
+            const result = getLogVerification();
+            const stateColor = result.stateMatches ? "#9fc3b6" : "#cf6a72";
+
+            let legacyLine = "";
+            if (result.hasLegacyBaseline) {
+                legacyLine = `<br/>⚠ Legacy baseline present — no history before some point in this save. Currently trusted (TRUST_LEGACY_BASELINE=true in lib/event-log.ts). Flip that to false to stop trusting it.`;
+            }
+
+            el.innerHTML = `
+                Chain: <strong style="color:${result.chainValid ? "#9fc3b6" : "#cf6a72"}">${result.chainValid ? "valid" : "BROKEN"}</strong>
+                &nbsp;·&nbsp; State: <strong style="color:${stateColor}">${result.stateMatches ? "matches log" : "MISMATCH"}</strong>
+                &nbsp;·&nbsp; ${result.eventCount} events
+                ${legacyLine}
+            `;
         }
 
         syncInputs() {

@@ -1,3 +1,22 @@
+# DBD 10.1.0 Chorus of sin | Save Integrity
+
+## Added
+
+* Saves and exports now go through a small cipher compiled to WebAssembly before being written to storage or downloaded, instead of plain readable JSON.
+* Every meaningful action this run (kills, undos, purchases, perk placements, killer changes, the Main Bounty) is recorded into a compact, tamper-evident history alongside the save. A completed run's points and kills can be checked against that history to confirm they line up with how they were actually earned.
+* Saves from before this history existed are picked up as a trusted starting point rather than treated as suspicious — a save can't be held to a standard it predates. This trust is a deliberate, adjustable policy, not a permanent exemption.
+* Players on a save without full action history now see a one-time notice explaining what that means and that it's trusted for now, not permanently.
+* The event log's hashing now runs through a WASM-compiled FNV-1a (via GOBLIN, https://github.com/Nyjako/GOBLIN) instead of a hand-written JS version.
+
+# DBD 10.1.0 Chorus of sin | FIX #3
+
+## Bug fixes
+
+* Fixed the Main Bounty paying the survivor's normal tier reward on top of its own 20 points instead of a flat 20, and made claiming it undoable by clicking again.
+* Fixed Single Killer mode always starting on The Ghostface with no way to choose — it now offers a killer picker before the run starts.
+* Fixed the changelog not showing anything on a genuine first visit; it now shows the full history instead of silently marking it as read.
+* Fixed the changelog's close button not matching the rest of the site's styling.
+
 # DBD 10.1.0 Chorus of sin | FIX #2
 
 ## Bug fixes

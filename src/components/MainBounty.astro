@@ -11,10 +11,11 @@ const img = characters[MAIN_BOUNTY.survivor];
 <section class="wanted-poster main-bounty-section">
     <h2 class="tier-name rye-regular">The Main Bounty</h2>
     <p class="reward">
-        Worth a flat {MAIN_BOUNTY.worth} points — claimable once per challenge.
+        Worth a flat {MAIN_BOUNTY.worth} points — claimable once per challenge. Click again to
+        undo a misclick. This is the last survivor we killed in our latest bounty challenge.
     </p>
     <div class="poster-grid main-bounty-grid">
-        <main-bounty-card data-survivor={MAIN_BOUNTY.survivor}>
+        <main-bounty-card>
             <div class="wanted-card main-bounty-card">
                 <Image class="wanted_character" src={img} alt={MAIN_BOUNTY.survivor} loading="lazy" />
                 <Image class="main-bounty-x" src={redX} alt="" loading="lazy" />
@@ -26,7 +27,7 @@ const img = characters[MAIN_BOUNTY.survivor];
 </section>
 
 <script>
-    import { appStorage, addPoints, toggleMainBounty, getWantedCardKills, setWantedCardKills } from "../stores/points";
+    import { appStorage, toggleMainBounty } from "../stores/points";
 
     customElements.define("main-bounty-card", class extends HTMLElement {
         unsubscribe?: () => void;
@@ -35,20 +36,13 @@ const img = characters[MAIN_BOUNTY.survivor];
             const card = this.querySelector<HTMLDivElement>(".main-bounty-card");
             if (!card) return;
 
-            const name = this.dataset.survivor ?? "";
-
             const render = () => {
                 card.classList.toggle("is-claimed", appStorage.get().mainBountyClaimed);
             };
             render();
 
             card.addEventListener("click", () => {
-                const { claimed, delta } = toggleMainBounty();
-
-                const kills = getWantedCardKills(name);
-                setWantedCardKills(name, Math.max(0, kills + (claimed ? 1 : -1)));
-                addPoints(delta);
-
+                toggleMainBounty();
                 render();
             });
 

@@ -1,0 +1,37 @@
+---
+import "../styles/points_display.css";
+---
+
+<legacy-save-notice>
+    <div class="legacy-notice-overlay" hidden>
+        <div class="legacy-notice-content">
+            <h2 class="rye-regular">About This Save</h2>
+            <p>This save doesn't have a full action history — it carried over from before that history existed. For now, the progress it already had is trusted as a fair starting point.</p>
+            <p>That trust isn't permanent. Once the next killer is added to the roster, saves like this one will start showing as unverified, since there's no record of how their starting progress was earned.</p>
+            <p>Everything you do from here on is tracked the same as any other save.</p>
+            <button type="button" class="tutorial-next legacy-notice-dismiss">Got it</button>
+        </div>
+    </div>
+</legacy-save-notice>
+
+<script>
+    import { getGameMode, getLogVerification, hasLegacyNoticeBeenSeen, markLegacyNoticeSeen } from "../stores/points";
+
+    customElements.define("legacy-save-notice", class extends HTMLElement {
+        connectedCallback() {
+            const overlay = this.querySelector<HTMLElement>(".legacy-notice-overlay");
+            if (!overlay) return;
+
+            const verification = getLogVerification();
+
+            if (getGameMode() && verification.hasLegacyBaseline && !hasLegacyNoticeBeenSeen()) {
+                overlay.removeAttribute("hidden");
+            }
+
+            this.querySelector(".legacy-notice-dismiss")?.addEventListener("click", () => {
+                markLegacyNoticeSeen();
+                overlay.setAttribute("hidden", "");
+            });
+        }
+    });
+</script>

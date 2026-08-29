@@ -27,6 +27,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install WASM toolchain (clang + lld)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld
+
       - name: Build Astro
         run: npm run build
 

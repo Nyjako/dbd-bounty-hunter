@@ -26,3 +26,5 @@ pnpm-debug.log*
 /public/icons/Perks
 /src/data/characters.ts
 /src/data/perks.ts
+/native/cipher.wasm
+/src/lib/wasm-bytes.ts

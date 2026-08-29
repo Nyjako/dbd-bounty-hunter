@@ -1013,3 +1013,50 @@ god-mode-panel {
     font-size: 0.78rem;
     color: var(--text-dim);
 }
+.god-log-status {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+}
+
+/* ---------- LEGACY SAVE NOTICE ---------- */
+legacy-save-notice {
+    display: block;
+}
+.legacy-notice-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1950;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.legacy-notice-overlay[hidden] {
+    display: none;
+}
+.legacy-notice-content {
+    max-width: 560px;
+    width: 100%;
+    background: var(--fog-2);
+    border: 1px solid var(--rust);
+    border-radius: var(--radius);
+    padding: 34px 32px 28px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7);
+}
+.legacy-notice-content h2 {
+    font-size: 1.3rem;
+    color: var(--parchment);
+    margin-bottom: 16px;
+}
+.legacy-notice-content p {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 12px;
+}
+.legacy-notice-dismiss {
+    margin-top: 8px;
+}
