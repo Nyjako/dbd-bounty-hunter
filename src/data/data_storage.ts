@@ -462,7 +462,6 @@ export const KILLER_TIERS = {
             { img_name: "The Artist",         display_name: "The Artist"         },
             { img_name: "The Pig",            display_name: "The Pig"            },
             { img_name: "The Plague",         display_name: "The Plague"         },
-            // TODO: { img_name: "The Terrifier",      display_name: "The Terrifier"      },
             { img_name: "The Clown",          display_name: "The Clown"          },
             { img_name: "The Oni",            display_name: "The Oni"            },
             { img_name: "The Huntress",       display_name: "The Huntress"       },
@@ -478,7 +477,6 @@ export const KILLER_TIERS = {
             { img_name: "The Dredge",         display_name: "The Dredge"         },
             { img_name: "The Demogorgon",     display_name: "The Demogorgon"     },
             { img_name: "The Krasue",         display_name: "The Krasue"         },
-            { img_name: "The Ghostface",      display_name: "The Ghost Face"     },
         ],
         D: [
             { img_name: "The Doctor",         display_name: "The Doctor"         },
@@ -487,6 +485,7 @@ export const KILLER_TIERS = {
             { img_name: "The Houndmaster",    display_name: "The Houndmaster"    },
         ],
         F: [
+            { img_name: "The Ghostface",      display_name: "The Ghost Face"     },
             { img_name: "The Trapper",        display_name: "The Trapper"        },
             { img_name: "The Hag",            display_name: "The Hag"            },
             { img_name: "The Skull Merchant", display_name: "The Skull Merchant" },
