@@ -3,29 +3,36 @@ import Portrait from "../components/portrait.astro";
 import { characters } from "../data/characters";
 import '../styles/character_portrait.css'
 import '../styles/fonts.css';
-import { CHARACTER_TIERS } from "../data/data_storage";
+import { CHARACTER_TIERS, getCharacterTierWithPtbFlag, type CharacterTierKey } from "../data/data_storage";
 import MainBounty from "../components/MainBounty.astro";
 
 const MAIN_BOUNTY = CHARACTER_TIERS.MAIN_BOUNTY;
 
-const s_tier_characters_data = CHARACTER_TIERS.S.map(x => { return { name: x, img: characters[x] } });
-const a_tier_characters_data = CHARACTER_TIERS.A.map(x => { return { name: x, img: characters[x] } });
-const b_tier_characters_data = CHARACTER_TIERS.B.map(x => { return { name: x, img: characters[x] } });
-const c_tier_characters_data = CHARACTER_TIERS.C.map(x => { return { name: x, img: characters[x] } });
-const d_tier_characters_data = CHARACTER_TIERS.D.map(x => { return { name: x, img: characters[x] } });
-const e_tier_characters_data = CHARACTER_TIERS.E.map(x => { return { name: x, img: characters[x] } });
+// Every tier renders inclusive of PTB_INJECT content up front — each card
+// carries its own ptbOnly flag and decides its own visibility client-side,
+// since the PTB toggle is a per-player setting, not something known here.
+function tierData(tier: CharacterTierKey) {
+    return getCharacterTierWithPtbFlag(tier).map(({ name, ptbOnly }) => ({ name, img: characters[name], ptbOnly }));
+}
 
-const baseRosterNames = [
-    ...CHARACTER_TIERS.S,
-    ...CHARACTER_TIERS.A,
-    ...CHARACTER_TIERS.B,
-    ...CHARACTER_TIERS.C,
-    ...CHARACTER_TIERS.D,
-    ...CHARACTER_TIERS.E,
-];
-const blacklistRosterNames = [
-    ...CHARACTER_TIERS.LEGENDARY.map((x) => x.name),
-    ...baseRosterNames,
+const s_tier_characters_data = tierData("S");
+const a_tier_characters_data = tierData("A");
+const b_tier_characters_data = tierData("B");
+const c_tier_characters_data = tierData("C");
+const d_tier_characters_data = tierData("D");
+const e_tier_characters_data = tierData("E");
+
+const baseRoster = [
+    ...s_tier_characters_data,
+    ...a_tier_characters_data,
+    ...b_tier_characters_data,
+    ...c_tier_characters_data,
+    ...d_tier_characters_data,
+    ...e_tier_characters_data,
+].map(({ name, ptbOnly }) => ({ name, ptbOnly }));
+const blacklistRoster = [
+    ...CHARACTER_TIERS.LEGENDARY.map((x) => ({ name: x.name, ptbOnly: false })),
+    ...baseRoster,
 ];
 ---
 
@@ -43,8 +50,8 @@ const blacklistRosterNames = [
 </header>
 
 <hunt-progress
-    data-base-roster={JSON.stringify(baseRosterNames)}
-    data-blacklist-roster={JSON.stringify(blacklistRosterNames)}
+    data-base-roster={JSON.stringify(baseRoster)}
+    data-blacklist-roster={JSON.stringify(blacklistRoster)}
 >
     <div class="completion-overlay" hidden>
         <div class="completion-content">
@@ -66,22 +73,22 @@ const blacklistRosterNames = [
     <div class="poster-grid"> {CHARACTER_TIERS.LEGENDARY.map( (data) => ( <Portrait points={data.price} img={data.img} name={data.name} correspondingCharacter={data.corresponding_character}/> ) )} </div>
     <h2 class="tier-name rye-regular">The Final Hunt</h2>
     <p class="reward">Reward: 10 points</p>
-    <div class="poster-grid"> {s_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
+    <div class="poster-grid"> {s_tier_characters_data.map( (data) => ( <Portrait points=10 img={data.img} name={data.name} ptbOnly={data.ptbOnly} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
     <h2 class="tier-name rye-regular">Worth the Chase</h2>
     <p class="reward">Reward: 6 points</p>
-    <div class="poster-grid"> {a_tier_characters_data.map( (data) => ( <Portrait points=6 img={data.img} name={data.name} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
+    <div class="poster-grid"> {a_tier_characters_data.map( (data) => ( <Portrait points=6 img={data.img} name={data.name} ptbOnly={data.ptbOnly} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
     <h2 class="tier-name rye-regular">Blood Worth Taking</h2>
     <p class="reward">Reward: 5 points</p>
-    <div class="poster-grid"> {b_tier_characters_data.map( (data) => ( <Portrait points=5 img={data.img} name={data.name} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
+    <div class="poster-grid"> {b_tier_characters_data.map( (data) => ( <Portrait points=5 img={data.img} name={data.name} ptbOnly={data.ptbOnly} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
     <h2 class="tier-name rye-regular">Routine Hunts</h2>
     <p class="reward">Reward: 3 points</p>
-    <div class="poster-grid"> {c_tier_characters_data.map( (data) => ( <Portrait points=3 img={data.img} name={data.name} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
+    <div class="poster-grid"> {c_tier_characters_data.map( (data) => ( <Portrait points=3 img={data.img} name={data.name} ptbOnly={data.ptbOnly} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
     <h2 class="tier-name rye-regular">Easy to Find</h2>
     <p class="reward">Reward: 2 points</p>
-    <div class="poster-grid"> {d_tier_characters_data.map( (data) => ( <Portrait points=2 img={data.img} name={data.name} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
+    <div class="poster-grid"> {d_tier_characters_data.map( (data) => ( <Portrait points=2 img={data.img} name={data.name} ptbOnly={data.ptbOnly} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
     <h2 class="tier-name rye-regular">Everyday Prey</h2>
     <p class="reward">Reward: 1 points</p>
-    <div class="poster-grid"> {e_tier_characters_data.map( (data) => ( <Portrait points=1 img={data.img} name={data.name} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
+    <div class="poster-grid"> {e_tier_characters_data.map( (data) => ( <Portrait points=1 img={data.img} name={data.name} ptbOnly={data.ptbOnly} hideUntilMainBountyClaimed={data.name === MAIN_BOUNTY.survivor}/> ) )} </div>
 </section>
 
 <script>
@@ -97,15 +104,18 @@ const blacklistRosterNames = [
             const overlay = this.querySelector<HTMLElement>(".completion-overlay");
             if (!overlay) return;
 
-            const baseRoster: string[] = JSON.parse(this.dataset.baseRoster || "[]");
-            const blacklistRoster: string[] = JSON.parse(this.dataset.blacklistRoster || "[]");
+            type RosterEntry = { name: string; ptbOnly: boolean };
+            const baseRoster: RosterEntry[] = JSON.parse(this.dataset.baseRoster || "[]");
+            const blacklistRoster: RosterEntry[] = JSON.parse(this.dataset.blacklistRoster || "[]");
 
             const render = () => {
                 const state = appStorage.get();
-                const roster = getGameMode() === "blacklist" ? blacklistRoster : baseRoster;
+                const roster = (getGameMode() === "blacklist" ? blacklistRoster : baseRoster).filter(
+                    (entry) => !entry.ptbOnly || state.ptbActive,
+                );
                 const complete =
                     roster.length > 0 &&
-                    roster.every((name) => (state.wantedCards[name] ?? 0) > 0);
+                    roster.every((entry) => (state.wantedCards[entry.name] ?? 0) > 0);
 
                 overlay.hidden = !complete || this.dismissed;
             };

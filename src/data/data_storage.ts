@@ -22,6 +22,25 @@ import Alucard         from '../icons/legendary_characters/Trevor - Alucard.png'
 import RichterBelmont  from '../icons/legendary_characters/Trevor - Richter Belmont.png';
 import SomaCruz        from '../icons/legendary_characters/Trevor - Soma Cruz.png';
 import GeraltOfRivia   from '../icons/legendary_characters/Vittorio - Geralt of Rivia.png';
+import Nier_2B         from '../icons/legendary_characters/Feng - 2B.png';
+import Nier_A2         from '../icons/legendary_characters/Yui - A2.png';
+
+// PTB_INJECT entries are staged content for the current public test build.
+// Each one records exactly where it belongs ("after" an existing entry in a
+// given tier/order), so toggling PTB content on/off never shifts anything
+// else's position — and when the real patch eventually ships, folding the
+// entry into the base array at that same spot changes nothing for any save
+// that already has progress tied to it.
+function injectPtb<T>(base: T[], injections: { after: string; data: T }[], key: (item: T) => string): T[] {
+    if (!injections.length) return base;
+
+    const result = [...base];
+    for (const injection of injections) {
+        const index = result.findIndex((item) => key(item) === injection.after);
+        result.splice(index === -1 ? result.length : index + 1, 0, injection.data);
+    }
+    return result;
+}
 
 export const CHARACTER_TIERS = {
     LEGENDARY: [
@@ -49,6 +68,8 @@ export const CHARACTER_TIERS = {
         { price: 5,  img: RichterBelmont,  name: "Richter Belmont",  corresponding_character: "Trevor Belmont"   },
         { price: 5,  img: SomaCruz,        name: "Soma Cruz",        corresponding_character: "Trevor Belmont"   },
         { price: 5,  img: GeraltOfRivia,   name: "Geralt of Rivia",  corresponding_character: "Vittorio Toscano" },
+        { price: 4,  img: Nier_A2,         name: "A2",               corresponding_character: "Yui Kimura"       },
+        { price: 3,  img: Nier_2B,         name: "2B",               corresponding_character: "Feng Min"         },
     ],
 
     MAIN_BOUNTY: {
@@ -120,8 +141,35 @@ export const CHARACTER_TIERS = {
         "Ace Visconti",
         "Feng Min",
         "Meg Thomas",
-        "Aurora"
+        "Aurora",
     ],
+    PTB_INJECT: [
+        {
+            where: "E",
+            after: "Aurora",
+            data: "Sienna Shaw",
+        },
+    ]
+}
+
+export type CharacterTierKey = "S" | "A" | "B" | "C" | "D" | "E";
+
+export function getCharacterTier(tier: CharacterTierKey, ptbActive: boolean): string[] {
+    const base = CHARACTER_TIERS[tier];
+    if (!ptbActive) return base;
+
+    const injections = CHARACTER_TIERS.PTB_INJECT.filter((entry) => entry.where === tier);
+    return injectPtb(base, injections, (name) => name);
+}
+
+// Always includes PTB entries, flagged, so callers can render every possible
+// card up front and decide per-viewer visibility at runtime (the PTB toggle
+// is a per-player setting, not something known at build time).
+export function getCharacterTierWithPtbFlag(tier: CharacterTierKey): { name: string; ptbOnly: boolean }[] {
+    const injectedNames = new Set(
+        CHARACTER_TIERS.PTB_INJECT.filter((entry) => entry.where === tier).map((entry) => entry.data),
+    );
+    return getCharacterTier(tier, true).map((name) => ({ name, ptbOnly: injectedNames.has(name) }));
 }
 
 export const PERKS_TIERS = {
@@ -280,79 +328,264 @@ export const PERKS_TIERS = {
         "Haywire",
         "Shattered Hope",
     ],
+    PTB_INJECT: [
+        {
+            where: "D",
+            after: "Make Your Choice",
+            data: "Funny Business",
+        },
+        {
+            where: "D",
+            after: "Make Your Choice",
+            data: "Kill Spree",
+        },
+        {
+            where: "D",
+            after: "Make Your Choice",
+            data: "Laughingstock",
+        },
+    ]
 };
 
+export const PERK_TIER_KEYS = ["S", "A", "C", "D", "F"] as const;
+export type PerkTierKey = (typeof PERK_TIER_KEYS)[number];
+
+export function getPerkPool(tier: PerkTierKey, ptbActive: boolean): string[] {
+    const base = PERKS_TIERS[tier];
+    if (!ptbActive) return base;
+
+    const injections = PERKS_TIERS.PTB_INJECT.filter((entry) => entry.where === tier);
+    return injectPtb(base, injections, (name) => name);
+}
+
+export function getAllPerks(ptbActive: boolean): { name: string; tier: PerkTierKey }[] {
+    return PERK_TIER_KEYS.flatMap((tier) => getPerkPool(tier, ptbActive).map((name) => ({ name, tier })));
+}
+
 export const KILLER_TIERS = {
-    S: [
-        { img_name: "The Nurse",       display_name: "The Nurse"       },
-        { img_name: "The Animatronic", display_name: "The Animatronic" },
-    ],
-    A: [
-        { img_name: "The Hillbilly",   display_name: "The Hillbilly"   },
-        { img_name: "The Slasher",     display_name: "The Slasher"     },
-        { img_name: "The Ghoul",       display_name: "The Ghoul"       },
-        { img_name: "The Twins",       display_name: "The Twins"       },
-        { img_name: "The Dracula",     display_name: "The Dracula"     },
-        { img_name: "The Singularity", display_name: "The Singularity" },
-        { img_name: "The Plague",      display_name: "The Plague"      },
-        { img_name: "The Oni",         display_name: "The Oni"         },
-        { img_name: "The Judgment",    display_name: "The Judgment"    },
-    ],
-    B: [
-        { img_name: "The Blight",       display_name: "The Blight"       },
-        { img_name: "The Spirit",       display_name: "The Spirit"       },
-        { img_name: "The First",        display_name: "The First"        },
-        { img_name: "The Krasue",       display_name: "The Krasue"       },
-        { img_name: "The Nightmare",    display_name: "The Nightmare"    },
-        { img_name: "The Artist",       display_name: "The Artist"       },
-        { img_name: "The Houndmaster",  display_name: "The Houndmaster"  },
-        { img_name: "The Master Mind",  display_name: "The Master Mind"  },
-        { img_name: "The Shape",        display_name: "The Shape"        },
-        { img_name: "The Deathslinger", display_name: "The Deathslinger" },
-        { img_name: "The Unknown",      display_name: "The Unknown"      },
-    ],
-    C: [
-        { img_name: "The Cenobite",    display_name: "The Cenobite"    },
-        { img_name: "The Lich",        display_name: "The Lich"        },
-        { img_name: "The Clown",       display_name: "The Clown"       },
-        { img_name: "The Executioner", display_name: "The Executioner" },
-        { img_name: "The Wraith",      display_name: "The Wraith"      },
-        { img_name: "The Nemesis",     display_name: "The Nemesis"     },
-        { img_name: "The Knight",      display_name: "The Knight"      },
-        { img_name: "The Yerkes",      display_name: "The Chucky"      }, // Chucky
-        { img_name: "The Xenomorph",   display_name: "The Xenomorph"   },
-        { img_name: "The Trickster",   display_name: "The Trickster"   },
-    ],
-    D: [
-        { img_name: "The Cannibal",   display_name: "The Cannibal"   },
-        { img_name: "The Huntress",   display_name: "The Huntress"   },
-        { img_name: "The Demogorgon", display_name: "The Demogorgon" },
-        { img_name: "The Doctor",     display_name: "The Doctor"     },
-        { img_name: "The Legion",     display_name: "The Legion"     },
-        { img_name: "The Pig",        display_name: "The Pig"        },
-        { img_name: "The Onryo",      display_name: "The Onryo"      },
-        { img_name: "The Dredge",     display_name: "The Dredge"     },
-    ],
-    F: [
-        { img_name: "The Hag",            display_name: "The Hag"            },
-        { img_name: "The Skull Merchant", display_name: "The Skull Merchant" },
-        { img_name: "The Trapper",        display_name: "The Trapper"        },
-        { img_name: "The Ghostface",      display_name: "The Ghostface"      },
-    ],
+    ALEX_TIERLIST: {
+        S: [
+            { img_name: "The Nurse", display_name: "The Nurse" },
+            { img_name: "The Animatronic", display_name: "The Animatronic" },
+        ],
+        A: [
+            { img_name: "The Hillbilly", display_name: "The Hillbilly" },
+            { img_name: "The Slasher", display_name: "The Slasher" },
+            { img_name: "The Ghoul", display_name: "The Ghoul" },
+            { img_name: "The Twins", display_name: "The Twins" },
+            { img_name: "The Dracula", display_name: "The Dark Lord" },
+            { img_name: "The Singularity", display_name: "The Singularity" },
+            { img_name: "The Plague", display_name: "The Plague" },
+            { img_name: "The Oni", display_name: "The Oni" },
+            { img_name: "The Judgment", display_name: "The Judgment" },
+        ],
+        B: [
+            { img_name: "The Blight", display_name: "The Blight" },
+            { img_name: "The Spirit", display_name: "The Spirit" },
+            { img_name: "The First", display_name: "The First" },
+            { img_name: "The Krasue", display_name: "The Krasue" },
+            { img_name: "The Nightmare", display_name: "The Nightmare" },
+            { img_name: "The Artist", display_name: "The Artist" },
+            { img_name: "The Houndmaster", display_name: "The Houndmaster" },
+            { img_name: "The Master Mind", display_name: "The Mastermind" },
+            { img_name: "The Shape", display_name: "The Shape" },
+            { img_name: "The Deathslinger", display_name: "The Deathslinger" },
+            { img_name: "The Unknown", display_name: "The Unknown" },
+        ],
+        C: [
+            { img_name: "The Cenobite", display_name: "The Cenobite" },
+            { img_name: "The Lich", display_name: "The Lich" },
+            { img_name: "The Clown", display_name: "The Clown" },
+            { img_name: "The Executioner", display_name: "The Executioner" },
+            { img_name: "The Wraith", display_name: "The Wraith" },
+            { img_name: "The Nemesis", display_name: "The Nemesis" },
+            { img_name: "The Knight", display_name: "The Knight" },
+            { img_name: "The Yerkes", display_name: "The Chucky" }, // Chucky
+            { img_name: "The Xenomorph", display_name: "The Xenomorph" },
+            { img_name: "The Trickster", display_name: "The Trickster" },
+        ],
+        D: [
+            { img_name: "The Cannibal", display_name: "The Cannibal" },
+            { img_name: "The Huntress", display_name: "The Huntress" },
+            { img_name: "The Demogorgon", display_name: "The Demogorgon" },
+            { img_name: "The Doctor", display_name: "The Doctor" },
+            { img_name: "The Legion", display_name: "The Legion" },
+            { img_name: "The Pig", display_name: "The Pig" },
+            { img_name: "The Onryo", display_name: "The Onryo" },
+            { img_name: "The Dredge", display_name: "The Dredge" },
+        ],
+        F: [
+            { img_name: "The Hag", display_name: "The Hag" },
+            { img_name: "The Skull Merchant", display_name: "The Skull Merchant" },
+            { img_name: "The Trapper", display_name: "The Trapper" },
+            { img_name: "The Ghostface", display_name: "The Ghostface" },
+        ],
+        PTB_INJECT: [
+            {
+                where: "B",
+                after: "The Artist",
+                data: { img_name: "The Terrifier", display_name: "The Terrifier" },
+            },
+        ]
+    },
+
+    CASUAL_TIERLIST: {
+        S: [
+            { img_name: "The Nurse",          display_name: "The Nurse"          },
+            { img_name: "The Blight",         display_name: "The Blight"         },
+            { img_name: "The Hillbilly",      display_name: "The Hillbilly"      },
+            { img_name: "The Ghoul",          display_name: "The Ghoul"          },
+            { img_name: "The Slasher",        display_name: "The Slasher"        },
+        ],
+        A: [
+            { img_name: "The Dracula",        display_name: "The Dark Lord"      },
+            { img_name: "The Singularity",    display_name: "The Singularity"    },
+            { img_name: "The Spirit",         display_name: "The Spirit"         },
+            { img_name: "The Animatronic",    display_name: "The Animatronic"    },
+            { img_name: "The Lich",           display_name: "The Lich"           },
+            { img_name: "The First",          display_name: "The First"          },
+            { img_name: "The Master Mind",    display_name: "The Mastermind"     },
+            { img_name: "The Executioner",    display_name: "The Executioner"    },
+            { img_name: "The Judgment",       display_name: "The Judgment"       },
+        ],
+        B: [
+            { img_name: "The Cannibal",       display_name: "The Cannibal"       },
+            { img_name: "The Xenomorph",      display_name: "The Xenomorph"      },
+            { img_name: "The Knight",         display_name: "The Knight"         },
+            { img_name: "The Nemesis",        display_name: "The Nemesis"        },
+            { img_name: "The Shape",          display_name: "The Shape"          },
+            { img_name: "The Unknown",        display_name: "The Unknown"        },
+            { img_name: "The Artist",         display_name: "The Artist"         },
+            { img_name: "The Pig",            display_name: "The Pig"            },
+            { img_name: "The Plague",         display_name: "The Plague"         },
+            // TODO: { img_name: "The Terrifier",      display_name: "The Terrifier"      },
+            { img_name: "The Clown",          display_name: "The Clown"          },
+            { img_name: "The Oni",            display_name: "The Oni"            },
+            { img_name: "The Huntress",       display_name: "The Huntress"       },
+        ],
+        C: [
+            { img_name: "The Nightmare",      display_name: "The Nightmare"      },
+            { img_name: "The Twins",          display_name: "The Twins"          },
+            { img_name: "The Cenobite",       display_name: "The Cenobite"       },
+            { img_name: "The Legion",         display_name: "The Legion"         },
+            { img_name: "The Deathslinger",   display_name: "The Deathslinger"   },
+            { img_name: "The Onryo",          display_name: "The Onryo"          },
+            { img_name: "The Yerkes",         display_name: "The Chucky"         },
+            { img_name: "The Dredge",         display_name: "The Dredge"         },
+            { img_name: "The Demogorgon",     display_name: "The Demogorgon"     },
+            { img_name: "The Krasue",         display_name: "The Krasue"         },
+            { img_name: "The Ghostface",      display_name: "The Ghost Face"     },
+        ],
+        D: [
+            { img_name: "The Doctor",         display_name: "The Doctor"         },
+            { img_name: "The Trickster",      display_name: "The Trickster"      },
+            { img_name: "The Wraith",         display_name: "The Wraith"         },
+            { img_name: "The Houndmaster",    display_name: "The Houndmaster"    },
+        ],
+        F: [
+            { img_name: "The Trapper",        display_name: "The Trapper"        },
+            { img_name: "The Hag",            display_name: "The Hag"            },
+            { img_name: "The Skull Merchant", display_name: "The Skull Merchant" },
+        ],
+        PTB_INJECT: [
+            {
+                where: "B",
+                after: "The Plague",
+                data: { img_name: "The Terrifier", display_name: "The Terrifier" },
+            },
+        ]
+    },
+
+    RELEASE_ORDER: {
+        ORDER: [
+            { img_name: "The Trapper",        display_name: "The Trapper"        },
+            { img_name: "The Wraith",         display_name: "The Wraith"         },
+            { img_name: "The Hillbilly",      display_name: "The Hillbilly"      },
+            { img_name: "The Nurse",          display_name: "The Nurse"          },
+            { img_name: "The Shape",          display_name: "The Shape"          },
+            { img_name: "The Hag",            display_name: "The Hag"            },
+            { img_name: "The Doctor",         display_name: "The Doctor"         },
+            { img_name: "The Cannibal",       display_name: "The Cannibal"       },
+            { img_name: "The Huntress",       display_name: "The Huntress"       },
+            { img_name: "The Nightmare",      display_name: "The Nightmare"      },
+            { img_name: "The Pig",            display_name: "The Pig"            },
+            { img_name: "The Clown",          display_name: "The Clown"          },
+            { img_name: "The Spirit",         display_name: "The Spirit"         },
+            { img_name: "The Legion",         display_name: "The Legion"         },
+            { img_name: "The Plague",         display_name: "The Plague"         },
+            { img_name: "The Ghostface",      display_name: "The Ghostface"      },
+            { img_name: "The Demogorgon",     display_name: "The Demogorgon"     },
+            { img_name: "The Oni",            display_name: "The Oni"            },
+            { img_name: "The Deathslinger",   display_name: "The Deathslinger"   },
+            { img_name: "The Executioner",    display_name: "The Executioner"    },
+            { img_name: "The Blight",         display_name: "The Blight"         },
+            { img_name: "The Twins",          display_name: "The Twins"          },
+            { img_name: "The Trickster",      display_name: "The Trickster"      },
+            { img_name: "The Nemesis",        display_name: "The Nemesis"        },
+            { img_name: "The Cenobite",       display_name: "The Cenobite"       },
+            { img_name: "The Artist",         display_name: "The Artist"         },
+            { img_name: "The Onryo",          display_name: "The Onryo"          },
+            { img_name: "The Dredge",         display_name: "The Dredge"         },
+            { img_name: "The Master Mind",    display_name: "The Mastermind"     },
+            { img_name: "The Knight",         display_name: "The Knight"         },
+            { img_name: "The Skull Merchant", display_name: "The Skull Merchant" },
+            { img_name: "The Singularity",    display_name: "The Singularity"    },
+            { img_name: "The Xenomorph",      display_name: "The Xenomorph"      },
+            { img_name: "The Yerkes",         display_name: "The Chucky"         }, // Chucky
+            { img_name: "The Unknown",        display_name: "The Unknown"        },
+            { img_name: "The Lich",           display_name: "The Lich"           },
+            { img_name: "The Dracula",        display_name: "The Dark Lord"      },
+            { img_name: "The Houndmaster",    display_name: "The Houndmaster"    },
+            { img_name: "The Ghoul",          display_name: "The Ghoul"          },
+            { img_name: "The Animatronic",    display_name: "The Animatronic"    },
+            { img_name: "The Krasue",         display_name: "The Krasue"         },
+            { img_name: "The First",          display_name: "The First"          },
+            { img_name: "The Slasher",        display_name: "The Slasher"        },
+            { img_name: "The Judgment",       display_name: "The Judgment"       },
+        ],
+        PTB_INJECT: [
+            {
+                where: "ORDER",
+                after: "The Judgment",
+                data: { img_name: "The Terrifier", display_name: "The Terrifier" },
+            },
+        ]
+    },
 };
+
+export const KILLER_TIERLIST_KEYS = ["ALEX_TIERLIST", "CASUAL_TIERLIST", "RELEASE_ORDER"] as const;
+export type KillerTierlistKey = (typeof KILLER_TIERLIST_KEYS)[number];
+export const DEFAULT_KILLER_TIERLIST: KillerTierlistKey = "ALEX_TIERLIST";
 
 export interface KillerLadderEntry {
     img_name: string;
     display_name: string;
-    tier: keyof typeof KILLER_TIERS;
+    // Empty for tierlists with no tier concept (RELEASE_ORDER).
+    tier: string;
 }
 
-// The order the player climbs through killers, weakest to strongest:
-// tier by tier from F up to S, and *within* each tier, last-listed-first —
-// e.g. in F: Ghostface -> Trapper -> Skull Merchant -> Hag, then on to D
-// starting from The Dredge down to The Cannibal, and so on.
-const KILLER_TIER_ORDER: (keyof typeof KILLER_TIERS)[] = ["F", "D", "C", "B", "A", "S"];
+type KillerEntry = { img_name: string; display_name: string };
 
-export const KILLER_LADDER: KillerLadderEntry[] = KILLER_TIER_ORDER.flatMap((tier) =>
-    [...KILLER_TIERS[tier]].reverse().map((killer) => ({ ...killer, tier })),
-);
+// The order the player climbs through killers, weakest to strongest: tier by
+// tier from F up to S, and *within* each tier, last-listed-first — e.g. in F:
+// Ghostface -> Trapper -> Skull Merchant -> Hag, then on to D starting from
+// The Dredge down to The Cannibal, and so on. Doesn't apply to RELEASE_ORDER,
+// which is already ordered weakest-to-strongest top to bottom.
+const KILLER_TIER_ORDER = ["F", "D", "C", "B", "A", "S"] as const;
+
+export function buildKillerLadder(tierlistKey: KillerTierlistKey, ptbActive: boolean): KillerLadderEntry[] {
+    const tierlist = KILLER_TIERS[tierlistKey];
+    const injections = ptbActive ? tierlist.PTB_INJECT : [];
+
+    if ("ORDER" in tierlist) {
+        const order = injectPtb(tierlist.ORDER, injections.filter((i) => i.where === "ORDER"), (k) => k.img_name);
+        return order.map((killer) => ({ ...killer, tier: "" }));
+    }
+
+    return KILLER_TIER_ORDER.flatMap((tier) => {
+        const base = (tierlist as unknown as Record<string, KillerEntry[]>)[tier] ?? [];
+        const tierInjections = injections.filter((i) => i.where === tier);
+        const withPtb = injectPtb(base, tierInjections as { after: string; data: KillerEntry }[], (k) => k.img_name);
+        return [...withPtb].reverse().map((killer) => ({ ...killer, tier }));
+    });
+}

@@ -1,5 +1,14 @@
 import { atom } from "nanostores";
-import { PERKS_TIERS, KILLER_LADDER, CHARACTER_TIERS } from "../data/data_storage";
+import {
+    CHARACTER_TIERS,
+    getPerkPool,
+    buildKillerLadder,
+    KILLER_TIERLIST_KEYS,
+    DEFAULT_KILLER_TIERLIST,
+    type KillerTierlistKey,
+    type KillerLadderEntry,
+    type PerkTierKey,
+} from "../data/data_storage";
 import { obfuscate, deobfuscate } from "../lib/obfuscate";
 import { appendToChain, verifyRun, GENESIS_HASH, type ReplayResult, type VerifyResult } from "../lib/event-log";
 
@@ -11,7 +20,7 @@ interface InventoryItem {
     description: string;
     price: number;
     category?: "perk" | "add-on" | "killer";
-    perkTier?: keyof typeof PERKS_TIERS;
+    perkTier?: PerkTierKey;
 }
 
 export interface EquippedPerk {
@@ -131,7 +140,7 @@ export const ADDON_TIER_COLORS: Record<(typeof ADDON_TIERS)[number], string> = {
     Iridescent: "#d6336c",
 };
 
-export const PERK_TIER_ORDER: (keyof typeof PERKS_TIERS)[] = ["F", "D", "C", "A", "S"];
+export const PERK_TIER_ORDER: PerkTierKey[] = ["F", "D", "C", "A", "S"];
 export const PERK_TIER_UNLOCK_COUNT = 4;
 
 const PERK_SLOT_COUNT = 4;
@@ -149,6 +158,12 @@ export interface AppStorage {
     gameMode: GameMode | null;
     singleKillerMode: boolean;
     perkMode: PerkMode;
+    killerTierlist: KillerTierlistKey;
+    // Whether PTB (public test build) content — killers/perks/survivors staged
+    // in PTB_INJECT — shows up and can be selected. A per-player choice, not a
+    // site-wide flag: toggling it never mutates killerName/wantedCards, only
+    // what's currently offered/rendered (see getCurrentKiller).
+    ptbActive: boolean;
     perkTierPurchaseCounts: Record<string, number>;
     mainBountyClaimed: boolean;
     // Whether the player has dismissed the one-time notice explaining
@@ -200,17 +215,26 @@ function normalizeAddonSlots(raw: unknown): number[] {
     return slots;
 }
 
-function normalizeKillerName(raw: unknown, legacyIndex: unknown): string {
-    if (typeof raw === "string" && KILLER_LADDER.some((k) => k.img_name === raw)) {
+function normalizeKillerTierlist(raw: unknown): KillerTierlistKey {
+    return (KILLER_TIERLIST_KEYS as readonly string[]).includes(raw as string)
+        ? (raw as KillerTierlistKey)
+        : DEFAULT_KILLER_TIERLIST;
+}
+
+// Validated against the PTB-inclusive ladder, regardless of the current PTB
+// toggle — so a saved killer tied to PTB content is never discarded just
+// because the player currently has PTB content switched off.
+function normalizeKillerName(raw: unknown, legacyIndex: unknown, inclusiveLadder: KillerLadderEntry[]): string {
+    if (typeof raw === "string" && inclusiveLadder.some((k) => k.img_name === raw)) {
         return raw;
     }
 
     const idx = Number(legacyIndex);
-    if (Number.isFinite(idx) && idx >= 0 && idx < KILLER_LADDER.length) {
-        return KILLER_LADDER[idx].img_name;
+    if (Number.isFinite(idx) && idx >= 0 && idx < inclusiveLadder.length) {
+        return inclusiveLadder[idx].img_name;
     }
 
-    return KILLER_LADDER[0].img_name;
+    return inclusiveLadder[0].img_name;
 }
 
 function normalizePerkTierPurchaseCounts(raw: unknown): Record<string, number> {
@@ -276,11 +300,15 @@ function buildInitialState(saved: Partial<AppStorage> & { killerIndex?: number }
         logHash = marked.logHash;
     }
 
+    const killerTierlist = normalizeKillerTierlist(saved.killerTierlist);
+    const ptbActive = typeof saved.ptbActive === "boolean" ? saved.ptbActive : true;
+    const inclusiveLadder = buildKillerLadder(killerTierlist, true);
+
     return {
         points: saved.points ?? 0,
         inventory: initialInventory,
         wantedCards: saved.wantedCards ?? {},
-        killerName: normalizeKillerName(saved.killerName, saved.killerIndex),
+        killerName: normalizeKillerName(saved.killerName, saved.killerIndex, inclusiveLadder),
         reachedMaxKiller: saved.reachedMaxKiller === true,
         perkSlots: normalizePerkSlots(saved.perkSlots),
         addonSlots: normalizeAddonSlots(saved.addonSlots),
@@ -288,6 +316,8 @@ function buildInitialState(saved: Partial<AppStorage> & { killerIndex?: number }
         gameMode: saved.gameMode === "sheriff" || saved.gameMode === "blacklist" ? saved.gameMode : null,
         singleKillerMode: saved.singleKillerMode === true,
         perkMode: saved.perkMode === "progression" ? "progression" : "normal",
+        killerTierlist,
+        ptbActive,
         perkTierPurchaseCounts: normalizePerkTierPurchaseCounts(saved.perkTierPurchaseCounts),
         mainBountyClaimed: saved.mainBountyClaimed === true,
         legacyNoticeSeen: saved.legacyNoticeSeen === true,
@@ -380,22 +410,39 @@ export function getPerkMode() {
     return appStorage.get().perkMode;
 }
 
+export function getKillerTierlist() {
+    return appStorage.get().killerTierlist;
+}
+
+export function isPtbActive() {
+    return appStorage.get().ptbActive;
+}
+
+export function setPtbActive(value: boolean) {
+    const newState = { ...appStorage.get(), ptbActive: value };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
 export function startRun(options: {
     singleKillerMode: boolean;
     perkMode: PerkMode;
     gameMode: GameMode;
+    killerTierlist: KillerTierlistKey;
+    ptbActive: boolean;
     killerName?: string;
 }) {
     const currentState = appStorage.get();
+    const inclusiveLadder = buildKillerLadder(options.killerTierlist, true);
     const killerName =
-        options.killerName && KILLER_LADDER.some((k) => k.img_name === options.killerName)
+        options.killerName && inclusiveLadder.some((k) => k.img_name === options.killerName)
             ? options.killerName
             : currentState.killerName;
 
     const logPatch = withLogEntry(
         currentState,
         "M",
-        `${options.gameMode}:${options.singleKillerMode ? "single" : "free"}:${options.perkMode}:${killerName}`,
+        `${options.gameMode}:${options.singleKillerMode ? "single" : "free"}:${options.perkMode}:${options.killerTierlist}:${options.ptbActive ? "ptb" : "live"}:${killerName}`,
     );
 
     const newState: AppStorage = {
@@ -403,6 +450,8 @@ export function startRun(options: {
         singleKillerMode: options.singleKillerMode,
         perkMode: options.perkMode,
         gameMode: options.gameMode,
+        killerTierlist: options.killerTierlist,
+        ptbActive: options.ptbActive,
         killerName,
         ...logPatch,
     };
@@ -411,25 +460,44 @@ export function startRun(options: {
 }
 
 // ---------- killer ladder ----------
-export function getCurrentKiller() {
-    return KILLER_LADDER.find((k) => k.img_name === appStorage.get().killerName) ?? KILLER_LADDER[0];
+// What's currently offered/selectable — respects the PTB toggle.
+export function getActiveLadder(state: AppStorage = appStorage.get()): KillerLadderEntry[] {
+    return buildKillerLadder(state.killerTierlist, state.ptbActive);
+}
+
+// Everything that could ever exist for this tierlist, PTB included — used so
+// a saved killer tied to PTB content still resolves correctly even while
+// PTB is toggled off.
+export function getInclusiveLadder(state: AppStorage = appStorage.get()): KillerLadderEntry[] {
+    return buildKillerLadder(state.killerTierlist, true);
+}
+
+export function getCurrentKiller(state: AppStorage = appStorage.get()): KillerLadderEntry {
+    const active = getActiveLadder(state);
+    const found = active.find((k) => k.img_name === state.killerName);
+    if (found) return found;
+
+    const inclusive = getInclusiveLadder(state);
+    return inclusive.find((k) => k.img_name === state.killerName) ?? active[0] ?? inclusive[0];
 }
 
 export function getKillerLadderPosition(name: string = appStorage.get().killerName): number {
-    const idx = KILLER_LADDER.findIndex((k) => k.img_name === name);
+    const idx = getActiveLadder().findIndex((k) => k.img_name === name);
     return idx === -1 ? 0 : idx;
 }
 
 export function isMaxKiller(name: string = appStorage.get().killerName): boolean {
-    return getKillerLadderPosition(name) >= KILLER_LADDER.length - 1;
+    const ladder = getActiveLadder();
+    return getKillerLadderPosition(name) >= ladder.length - 1;
 }
 
 function pickRandomKillerName(excludeName: string): string {
-    if (KILLER_LADDER.length <= 1) return excludeName;
+    const ladder = getActiveLadder();
+    if (ladder.length <= 1) return excludeName;
 
     let next = excludeName;
     while (next === excludeName) {
-        next = KILLER_LADDER[Math.floor(Math.random() * KILLER_LADDER.length)].img_name;
+        next = ladder[Math.floor(Math.random() * ladder.length)].img_name;
     }
     return next;
 }
@@ -461,8 +529,8 @@ export function isPerkTierUnlocked(tier: string, state: AppStorage = appStorage.
     return (state.perkTierPurchaseCounts[previousTier] ?? 0) >= PERK_TIER_UNLOCK_COUNT;
 }
 
-function rollPerkForTier(tier: keyof typeof PERKS_TIERS, currentSlots: (EquippedPerk | null)[]): string | null {
-    const pool = PERKS_TIERS[tier] ?? [];
+function rollPerkForTier(tier: PerkTierKey, currentSlots: (EquippedPerk | null)[]): string | null {
+    const pool = getPerkPool(tier, appStorage.get().ptbActive);
     const equippedNames = new Set(currentSlots.filter(Boolean).map((s) => s!.name));
     const available = pool.filter((name) => !equippedNames.has(name));
 
@@ -490,11 +558,12 @@ export function purchaseItem(itemId: string): boolean {
             patch.killerName = newKiller;
             Object.assign(patch, withLogEntry(currentState, "R", `${newKiller}:${item.price}`));
         } else {
+            const ladder = getActiveLadder(currentState);
             const position = getKillerLadderPosition(currentState.killerName);
-            const nextPosition = Math.min(position + 1, KILLER_LADDER.length - 1);
-            const newKiller = KILLER_LADDER[nextPosition].img_name;
+            const nextPosition = Math.min(position + 1, ladder.length - 1);
+            const newKiller = ladder[nextPosition].img_name;
             patch.killerName = newKiller;
-            if (nextPosition >= KILLER_LADDER.length - 1) {
+            if (nextPosition >= ladder.length - 1) {
                 patch.reachedMaxKiller = true;
             }
             Object.assign(patch, withLogEntry(currentState, "Y", `${newKiller}:${item.price}`));
@@ -710,8 +779,15 @@ export function godSetPoints(value: number) {
 }
 
 export function godSetKiller(name: string) {
-    if (!KILLER_LADDER.some((k) => k.img_name === name)) return;
-    const newState = { ...appStorage.get(), killerName: name };
+    const currentState = appStorage.get();
+    if (!getInclusiveLadder(currentState).some((k) => k.img_name === name)) return;
+    const newState = { ...currentState, killerName: name };
+    appStorage.set(newState);
+    saveState(newState);
+}
+
+export function godSetKillerTierlist(tierlist: KillerTierlistKey) {
+    const newState = { ...appStorage.get(), killerTierlist: tierlist };
     appStorage.set(newState);
     saveState(newState);
 }

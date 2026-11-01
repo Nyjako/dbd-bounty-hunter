@@ -5,13 +5,14 @@ const {
     points = 0,
     correspondingCharacter = "",
     hideUntilMainBountyClaimed = false,
+    ptbOnly = false,
 } = Astro.props;
 import '../styles/character_portrait.css'
 import sacrificed from '../icons/sacrificed.webp'
 import { Image } from 'astro:assets';
 ---
 
-<wanted-card data-corresponding={correspondingCharacter} data-hide-until-claimed={hideUntilMainBountyClaimed ? "1" : ""}>
+<wanted-card data-corresponding={correspondingCharacter} data-hide-until-claimed={hideUntilMainBountyClaimed ? "1" : ""} data-ptb-only={ptbOnly ? "1" : ""}>
     <div class="wanted-card" data-points={points}>
         <Image class="wanted_character" src={img} alt={name} loading="lazy" />
 
@@ -41,6 +42,7 @@ import { Image } from 'astro:assets';
             const name = card.querySelector<HTMLHeadingElement>(".survivor-name")?.textContent ?? "";
             const correspondingCharacter = this.dataset.corresponding || "";
             const hideUntilClaimed = this.dataset.hideUntilClaimed === "1";
+            const ptbOnly = this.dataset.ptbOnly === "1";
             const reward = Number(card.dataset.points);
 
             const groupKey =
@@ -56,9 +58,9 @@ import { Image } from 'astro:assets';
                 undoBtn.style.display = kills > 0 ? "flex" : "none";
                 card.classList.toggle("is-sacrificed", kills > 0);
 
-                if (hideUntilClaimed) {
-                    this.hidden = !appStorage.get().mainBountyClaimed;
-                }
+                this.hidden =
+                    (hideUntilClaimed && !appStorage.get().mainBountyClaimed) ||
+                    (ptbOnly && !appStorage.get().ptbActive);
             };
 
             render();

@@ -272,15 +272,18 @@ store-modal .modal-content h3::before {
 }
 .perk-slot-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    align-items: start;
 }
 .addon-slot-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    align-items: start;
 }
 
 .slot-card {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     text-align: center;
     background: var(--fog);
@@ -290,6 +293,12 @@ store-modal .modal-content h3::before {
     font-family: inherit;
     color: inherit;
 }
+
+.perk-slot {
+    min-height: 190px;
+}
+
+
 
 button.slot-card {
     cursor: default;
@@ -318,6 +327,12 @@ button.slot-card:disabled {
     font-size: 0.82rem;
     color: var(--parchment-dim);
     font-weight: 600;
+    line-height: 1.3;
+    height: calc(1.3em * 2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 .perk-name.empty {
     color: var(--ash-light);
@@ -444,6 +459,17 @@ button.slot-card:disabled {
     margin-top: 8px;
 }
 
+/* ---------- RUN SETTINGS ---------- */
+.run-settings {
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-top: 8px;
+}
+.run-settings h3 {
+    margin: 0 0 10px !important;
+}
+
 /* ---------- DANGER ZONE ---------- */
 .danger-zone {
     border: 1px dashed var(--blood);
@@ -559,6 +585,80 @@ mode-select-gate {
     font-size: 0.86rem;
     color: var(--text-dim);
     line-height: 1.6;
+}
+
+.mode-gate-subtext {
+    font-size: 0.86rem;
+    color: var(--text-dim);
+    margin: -8px 0 18px;
+}
+
+.tierlist-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.tierlist-preview-toggle {
+    margin-top: 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--rust);
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+.tierlist-preview-toggle:hover {
+    color: var(--parchment);
+}
+
+.tierlist-previews {
+    margin: 4px 0 18px;
+    text-align: left;
+}
+
+.tierlist-preview {
+    background: var(--fog);
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-top: 8px;
+}
+
+.tierlist-preview-group {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 4px 0;
+}
+.tierlist-preview-group + .tierlist-preview-group {
+    border-top: 1px solid var(--ash);
+}
+
+.tierlist-preview-names {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+}
+
+.ptb-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    text-align: left;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+    cursor: pointer;
+}
+.ptb-toggle input {
+    margin-top: 3px;
+    flex-shrink: 0;
 }
 
 /* ---------- TUTORIAL GUIDE ---------- */

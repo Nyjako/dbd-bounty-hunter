@@ -42,6 +42,14 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                 </div>
             </section>
 
+            <section class="run-settings">
+                <h3>Run Settings</h3>
+                <label class="ptb-toggle">
+                    <input type="checkbox" id="ptb-active-toggle" />
+                    Include PTB content — killers, perks and survivors staged for the current public test build.
+                </label>
+            </section>
+
             <section class="danger-zone">
                 <h3>Danger Zone</h3>
                 <div class="danger-actions">
@@ -93,6 +101,8 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         resetProgress,
         exportSave,
         importSave,
+        getCurrentKiller,
+        setPtbActive,
         PERK_TIER_UNLOCK_COUNT,
         ADDON_TIERS,
         ADDON_TIER_COLORS,
@@ -100,7 +110,6 @@ const addonItem = inventory.find((item) => item.category === "add-on");
     } from "../stores/points.ts";
     import { getPerkIcon } from "../lib/perk-icons.ts";
     import { characters } from "../data/characters.ts";
-    import { KILLER_LADDER } from "../data/data_storage.ts";
 
     type PendingPurchase =
         | { kind: "item"; id: string; cost: number }
@@ -160,6 +169,10 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             this.setupSaveHandlers();
             this.setupCloseHandlers();
 
+            this.querySelector<HTMLInputElement>("#ptb-active-toggle")?.addEventListener("change", (e) => {
+                setPtbActive((e.target as HTMLInputElement).checked);
+            });
+
             this.unsubscribe = appStorage.listen((state) => this.render(state));
         }
 
@@ -176,6 +189,12 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             this.renderPerkSlots(state);
             this.renderPerkShop(state);
             this.renderAddonSlots(state);
+            this.renderRunSettings(state);
+        }
+
+        renderRunSettings(state: AppStorage) {
+            const checkbox = this.querySelector<HTMLInputElement>("#ptb-active-toggle");
+            if (checkbox) checkbox.checked = state.ptbActive;
         }
 
         renderPoints(state: AppStorage) {
@@ -187,7 +206,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
             const el = this.querySelector("#rank-display");
             if (!el) return;
 
-            const killer = KILLER_LADDER.find((k) => k.img_name === state.killerName) ?? KILLER_LADDER[0];
+            const killer = getCurrentKiller(state);
             const iconSrc = (characters as Record<string, any>)[killer.img_name]?.src;
 
             el.innerHTML = `
@@ -195,7 +214,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                     ${iconSrc ? `<img class="killer-portrait" src="${iconSrc}" alt="${killer.display_name}" />` : ""}
                 </div>
                 <div class="killer-name">${killer.display_name}</div>
-                <span class="tier-chip">${killer.tier}-tier</span>
+                ${killer.tier ? `<span class="tier-chip">${killer.tier}-tier</span>` : ""}
             `;
         }
 

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const img_dir = "default-icons-v10.0.1";
+const img_dir = "default-icons";
 
 const outputDir = "src/data";
 

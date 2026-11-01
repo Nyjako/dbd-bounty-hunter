@@ -1,10 +1,7 @@
 ---
 import "../styles/points_display.css";
-import { KILLER_LADDER, PERKS_TIERS } from "../data/data_storage";
+import { KILLER_TIERLIST_KEYS } from "../data/data_storage";
 
-const ALL_PERKS = Object.entries(PERKS_TIERS).flatMap(([tier, names]) =>
-    (names as string[]).map((name) => ({ name, tier })),
-);
 const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescent"];
 ---
 
@@ -31,11 +28,7 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
             <div class="god-mode-section">
                 <span class="sheet-label">Killer</span>
                 <div class="god-mode-row">
-                    <select class="killer-select" id="god-killer-select">
-                        {KILLER_LADDER.map((k) => (
-                            <option value={k.img_name}>{k.display_name} ({k.tier}-tier)</option>
-                        ))}
-                    </select>
+                    <select class="killer-select" id="god-killer-select"></select>
                     <button type="button" class="buy-button" id="god-killer-set">Set</button>
                 </div>
                 <label class="god-mode-checkbox">
@@ -50,9 +43,6 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
                     <div class="god-mode-row">
                         <select class="killer-select" data-perk-slot={slot}>
                             <option value="">— Empty —</option>
-                            {ALL_PERKS.map((p) => (
-                                <option value={`${p.tier}::${p.name}`}>{p.tier} — {p.name}</option>
-                            ))}
                         </select>
                         <button type="button" class="buy-button god-perk-set" data-perk-slot={slot}>Set</button>
                     </div>
@@ -94,6 +84,18 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
                     </select>
                     <button type="button" class="buy-button" id="god-perk-mode-set">Set</button>
                 </div>
+                <div class="god-mode-row">
+                    <select class="killer-select" id="god-killer-tierlist">
+                        {KILLER_TIERLIST_KEYS.map((key) => (
+                            <option value={key}>{key}</option>
+                        ))}
+                    </select>
+                    <button type="button" class="buy-button" id="god-killer-tierlist-set">Set</button>
+                </div>
+                <label class="god-mode-checkbox">
+                    <input type="checkbox" id="god-ptb-active" />
+                    PTB content active
+                </label>
                 <label class="god-mode-checkbox">
                     <input type="checkbox" id="god-main-bounty" />
                     Main Bounty claimed
@@ -117,6 +119,7 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
         appStorage,
         godSetPoints,
         godSetKiller,
+        godSetKillerTierlist,
         godSetReachedMaxKiller,
         godSetPerkSlot,
         godClearPendingPerk,
@@ -125,11 +128,13 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
         godSetSingleKillerMode,
         godSetPerkMode,
         godSetMainBountyClaimed,
+        setPtbActive,
         setWantedCardKills,
         getLogVerification,
         type GameMode,
         type PerkMode,
     } from "../stores/points";
+    import { buildKillerLadder, getAllPerks, type KillerTierlistKey } from "../data/data_storage";
 
     import { chainHash, GENESIS_HASH } from "../lib/event-log";
 
@@ -156,6 +161,7 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
                     chainHash(GENESIS_HASH, this.buffer.join(",")) === TRIGGER_HASH
                 ) {
                     this.buffer = [];
+                    this.renderOptions();
                     this.syncInputs();
                     this.renderLogStatus();
                     overlay.hidden = !overlay.hidden;
@@ -167,12 +173,39 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
             });
 
             this.wireControls();
+            this.renderOptions();
 
-            appStorage.listen(() => {
-                if (!overlay.hidden) {
-                    this.syncInputs();
-                    this.renderLogStatus();
+            appStorage.listen((state, oldState) => {
+                if (overlay.hidden) return;
+
+                if (state.killerTierlist !== oldState?.killerTierlist || state.ptbActive !== oldState?.ptbActive) {
+                    this.renderOptions();
                 }
+                this.syncInputs();
+                this.renderLogStatus();
+            });
+        }
+
+        // Killer/perk option lists depend on the save's tierlist + PTB
+        // toggle, so they're rebuilt here instead of at build time.
+        renderOptions() {
+            const state = appStorage.get();
+            const ladder = buildKillerLadder(state.killerTierlist, state.ptbActive);
+            const allPerks = getAllPerks(state.ptbActive);
+
+            const killerSelect = this.querySelector<HTMLSelectElement>("#god-killer-select");
+            if (killerSelect) {
+                killerSelect.innerHTML = ladder
+                    .map((k) => {
+                        const label = k.tier ? `${k.display_name} (${k.tier}-tier)` : k.display_name;
+                        return `<option value="${k.img_name}">${label}</option>`;
+                    })
+                    .join("");
+            }
+
+            this.querySelectorAll<HTMLSelectElement>("select[data-perk-slot]").forEach((select) => {
+                const options = allPerks.map((p) => `<option value="${p.tier}::${p.name}">${p.tier} — ${p.name}</option>`).join("");
+                select.innerHTML = `<option value="">— Empty —</option>${options}`;
             });
         }
 
@@ -227,6 +260,12 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
 
             const perkModeSelect = this.querySelector<HTMLSelectElement>("#god-perk-mode");
             if (perkModeSelect) perkModeSelect.value = state.perkMode;
+
+            const tierlistSelect = this.querySelector<HTMLSelectElement>("#god-killer-tierlist");
+            if (tierlistSelect) tierlistSelect.value = state.killerTierlist;
+
+            const ptbBox = this.querySelector<HTMLInputElement>("#god-ptb-active");
+            if (ptbBox) ptbBox.checked = state.ptbActive;
 
             const mainBountyBox = this.querySelector<HTMLInputElement>("#god-main-bounty");
             if (mainBountyBox) mainBountyBox.checked = state.mainBountyClaimed;
@@ -285,6 +324,15 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
             this.querySelector("#god-perk-mode-set")?.addEventListener("click", () => {
                 const select = this.querySelector<HTMLSelectElement>("#god-perk-mode");
                 godSetPerkMode((select?.value as PerkMode) ?? "normal");
+            });
+
+            this.querySelector("#god-killer-tierlist-set")?.addEventListener("click", () => {
+                const select = this.querySelector<HTMLSelectElement>("#god-killer-tierlist");
+                if (select?.value) godSetKillerTierlist(select.value as KillerTierlistKey);
+            });
+
+            this.querySelector("#god-ptb-active")?.addEventListener("change", (e) => {
+                setPtbActive((e.target as HTMLInputElement).checked);
             });
 
             this.querySelector("#god-main-bounty")?.addEventListener("change", (e) => {

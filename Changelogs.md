@@ -1,3 +1,18 @@
+# DBD 10.3.0-PTB Art the Clown | Big update
+
+## Added
+
+* Two new legendary survivors — 2B (Feng Min) and A2 (Yui Kimura) — and upgraded portraits for every legendary character, sourced from https://deadbydaylight.wiki.gg/wiki/Category:Legendary_Characters.
+* Two more killer tierlists alongside the original: Casual Tierlist and Release Order (killers in the order they actually launched). The original ranking is now named Alex's Tierlist and stays the default.
+* Picking a tierlist is now its own step when starting a run, with a preview of each list's ranking before you commit.
+* PTB content toggle: killers, perks, and survivors staged for the current public test build (Art the Clown/The Terrifier, his perks, Sienna Shaw) can be switched on or off at any time — from the new Run Settings panel in the store, or God Mode — without ever touching progress you've already earned on that content. Defaults to on for this update.
+
+## Fixed
+
+* Long character names ("Detective David Tapp", "William Bill Overbeck") no longer wrap to two lines and push their card taller than its neighbors, shifting the rest of the row.
+* Filling a perk slot in the store no longer stretches the other slots in that row — every slot now renders at a constant size.
+* A few Casual Tierlist killers (The Dark Lord, The Mastermind, The Ghost Face) were keyed to portraits that don't exist, so they rendered with no image.
+
 # DBD 10.1.0 Chorus of sin | Save Integrity
 
 ## Added

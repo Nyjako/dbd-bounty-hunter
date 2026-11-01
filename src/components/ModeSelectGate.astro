@@ -1,6 +1,36 @@
 ---
 import "../styles/points_display.css";
-import { KILLER_LADDER } from "../data/data_storage";
+import { KILLER_TIERLIST_KEYS, buildKillerLadder, type KillerTierlistKey } from "../data/data_storage";
+
+const TIERLIST_META: Record<KillerTierlistKey, { title: string; description: string }> = {
+    ALEX_TIERLIST: {
+        title: "Alex's Tierlist",
+        description: "The default ranking this challenge has always used.",
+    },
+    CASUAL_TIERLIST: {
+        title: "Casual Tierlist",
+        description: "A softer, less meta-focused ranking — a gentler climb for a more relaxed run.",
+    },
+    RELEASE_ORDER: {
+        title: "Release Order",
+        description: "Climb killers in the order they were actually released, oldest to newest.",
+    },
+};
+
+const PREVIEW_TIER_ORDER = ["S", "A", "B", "C", "D", "F"] as const;
+
+function buildPreviewGroups(key: KillerTierlistKey) {
+    const ladder = buildKillerLadder(key, true);
+
+    if (ladder.every((k) => k.tier === "")) {
+        return [{ label: null as string | null, killers: ladder }];
+    }
+
+    return PREVIEW_TIER_ORDER.map((tier) => ({
+        label: tier as string | null,
+        killers: ladder.filter((k) => k.tier === tier).reverse(),
+    })).filter((group) => group.killers.length > 0);
+}
 ---
 
 <mode-select-gate>
@@ -10,9 +40,43 @@ import { KILLER_LADDER } from "../data/data_storage";
                 <span class="mode-gate-dot" data-dot="1"></span>
                 <span class="mode-gate-dot" data-dot="2"></span>
                 <span class="mode-gate-dot" data-dot="3"></span>
+                <span class="mode-gate-dot" data-dot="4"></span>
             </div>
 
             <div class="mode-gate-step" data-step="1">
+                <h2 class="rye-regular">Choose Your Tierlist</h2>
+                <p class="mode-gate-subtext">Picks which killer ranking this run climbs — decides upgrade order and rerolls.</p>
+
+                <div class="mode-options tierlist-options">
+                    {KILLER_TIERLIST_KEYS.map((key) => (
+                        <div class="mode-option tierlist-option" data-tierlist={key}>
+                            <h3>{TIERLIST_META[key].title}</h3>
+                            <p>{TIERLIST_META[key].description}</p>
+                            <button type="button" class="tierlist-preview-toggle" data-preview-toggle={key}>Preview list ▾</button>
+                        </div>
+                    ))}
+                </div>
+
+                <div class="tierlist-previews">
+                    {KILLER_TIERLIST_KEYS.map((key) => (
+                        <div class="tierlist-preview" data-preview={key} hidden>
+                            {buildPreviewGroups(key).map((group) => (
+                                <div class="tierlist-preview-group">
+                                    {group.label && <span class="tier-chip">{group.label}-tier</span>}
+                                    <span class="tierlist-preview-names">{group.killers.map((k) => k.display_name).join(" · ")}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+
+                <label class="ptb-toggle">
+                    <input type="checkbox" id="ptb-toggle-checkbox" checked />
+                    Include PTB content — killers, perks and survivors staged for the current public test build. You can flip this anytime during the run.
+                </label>
+            </div>
+
+            <div class="mode-gate-step" data-step="2" hidden>
                 <h2 class="rye-regular">Choose Your Killer</h2>
                 <div class="mode-options">
                     <button type="button" class="mode-option" data-single-killer="false">
@@ -27,16 +91,12 @@ import { KILLER_LADDER } from "../data/data_storage";
 
                 <div class="killer-picker" hidden>
                     <label for="single-killer-select" class="sheet-label">Pick your killer</label>
-                    <select id="single-killer-select" class="killer-select">
-                        {KILLER_LADDER.map((killer) => (
-                            <option value={killer.img_name}>{killer.display_name} ({killer.tier}-tier)</option>
-                        ))}
-                    </select>
+                    <select id="single-killer-select" class="killer-select"></select>
                     <button type="button" class="buy-button killer-picker-confirm">Confirm Killer</button>
                 </div>
             </div>
 
-            <div class="mode-gate-step" data-step="2" hidden>
+            <div class="mode-gate-step" data-step="3" hidden>
                 <h2 class="rye-regular">Choose Your Perks</h2>
                 <div class="mode-options">
                     <button type="button" class="mode-option" data-perk-mode="normal">
@@ -50,7 +110,7 @@ import { KILLER_LADDER } from "../data/data_storage";
                 </div>
             </div>
 
-            <div class="mode-gate-step" data-step="3" hidden>
+            <div class="mode-gate-step" data-step="4" hidden>
                 <h2 class="rye-regular">Choose Your Hunt</h2>
                 <div class="mode-options">
                     <button type="button" class="mode-option" data-game-mode="sheriff">
@@ -69,9 +129,12 @@ import { KILLER_LADDER } from "../data/data_storage";
 
 <script>
     import { getGameMode, startRun, type GameMode, type PerkMode } from "../stores/points";
+    import { buildKillerLadder, DEFAULT_KILLER_TIERLIST, type KillerTierlistKey } from "../data/data_storage";
 
     customElements.define("mode-select-gate", class extends HTMLElement {
         step = 1;
+        tierlistKey: KillerTierlistKey = DEFAULT_KILLER_TIERLIST;
+        ptbActive = true;
         singleKillerMode = false;
         chosenKillerName = "";
         perkMode: PerkMode = "normal";
@@ -87,6 +150,31 @@ import { KILLER_LADDER } from "../data/data_storage";
             overlay?.removeAttribute("hidden");
             this.render();
 
+            this.querySelectorAll<HTMLButtonElement>(".tierlist-preview-toggle").forEach((btn) => {
+                btn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const key = btn.dataset.previewToggle;
+                    const preview = this.querySelector<HTMLElement>(`[data-preview="${key}"]`);
+                    if (preview) preview.hidden = !preview.hidden;
+                });
+            });
+
+            this.querySelectorAll<HTMLElement>(".tierlist-option").forEach((card) => {
+                card.addEventListener("click", (e) => {
+                    if ((e.target as HTMLElement).closest(".tierlist-preview-toggle")) return;
+
+                    const key = card.dataset.tierlist as KillerTierlistKey;
+                    const ptbCheckbox = this.querySelector<HTMLInputElement>("#ptb-toggle-checkbox");
+
+                    this.tierlistKey = key;
+                    this.ptbActive = ptbCheckbox?.checked ?? true;
+                    this.populateKillerSelect();
+
+                    this.step = 2;
+                    this.render();
+                });
+            });
+
             this.querySelectorAll<HTMLButtonElement>("[data-single-killer]").forEach((btn) => {
                 btn.addEventListener("click", () => {
                     const isSingle = btn.dataset.singleKiller === "true";
@@ -97,7 +185,7 @@ import { KILLER_LADDER } from "../data/data_storage";
                         return;
                     }
 
-                    this.step = 2;
+                    this.step = 3;
                     this.render();
                 });
             });
@@ -105,14 +193,14 @@ import { KILLER_LADDER } from "../data/data_storage";
             this.querySelector(".killer-picker-confirm")?.addEventListener("click", () => {
                 const select = this.querySelector<HTMLSelectElement>("#single-killer-select");
                 this.chosenKillerName = select?.value ?? "";
-                this.step = 2;
+                this.step = 3;
                 this.render();
             });
 
             this.querySelectorAll<HTMLButtonElement>("[data-perk-mode]").forEach((btn) => {
                 btn.addEventListener("click", () => {
                     this.perkMode = btn.dataset.perkMode === "progression" ? "progression" : "normal";
-                    this.step = 3;
+                    this.step = 4;
                     this.render();
                 });
             });
@@ -126,11 +214,26 @@ import { KILLER_LADDER } from "../data/data_storage";
                         singleKillerMode: this.singleKillerMode,
                         perkMode: this.perkMode,
                         gameMode: mode,
+                        killerTierlist: this.tierlistKey,
+                        ptbActive: this.ptbActive,
                         killerName: this.singleKillerMode ? this.chosenKillerName : undefined,
                     });
                     window.location.reload();
                 });
             });
+        }
+
+        populateKillerSelect() {
+            const select = this.querySelector<HTMLSelectElement>("#single-killer-select");
+            if (!select) return;
+
+            const ladder = buildKillerLadder(this.tierlistKey, this.ptbActive);
+            select.innerHTML = ladder
+                .map((killer) => {
+                    const label = killer.tier ? `${killer.display_name} (${killer.tier}-tier)` : killer.display_name;
+                    return `<option value="${killer.img_name}">${label}</option>`;
+                })
+                .join("");
         }
 
         render() {
