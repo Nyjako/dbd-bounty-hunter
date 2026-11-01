@@ -138,10 +138,7 @@ const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescen
 
     import { chainHash, GENESIS_HASH } from "../lib/event-log";
 
-    // The trigger sequence itself isn't kept as a literal array — only
-    // its hash is. Reading this file won't hand someone the sequence;
-    // they'd need to guess key-code combinations and hash-compare, same
-    // as brute-forcing anything else hashed.
+    // The trigger sequence
     const TRIGGER_HASH = "eeefbd945466d423";
     const TRIGGER_LENGTH = 10;
 
