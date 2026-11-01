@@ -593,6 +593,21 @@ mode-select-gate {
     margin: -8px 0 18px;
 }
 
+.mode-gate-back {
+    display: inline-block;
+    margin-bottom: 14px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--ash-light);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.mode-gate-back:hover {
+    color: var(--rust);
+}
+
 .tierlist-option {
     display: flex;
     flex-direction: column;
@@ -632,18 +647,34 @@ mode-select-gate {
 
 .tierlist-preview-group {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     gap: 10px;
-    padding: 4px 0;
+    padding: 8px 0;
 }
 .tierlist-preview-group + .tierlist-preview-group {
     border-top: 1px solid var(--ash);
 }
 
+.tierlist-preview-tier {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
 .tierlist-preview-names {
-    font-size: 0.82rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+}
+
+.tierlist-preview-pill {
+    font-size: 0.76rem;
+    white-space: nowrap;
     color: var(--text-dim);
-    line-height: 1.6;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--ash);
+    border-radius: 3px;
+    padding: 2px 8px;
 }
 
 .ptb-toggle {
@@ -970,6 +1001,14 @@ changelog-viewer {
     font-style: italic;
     color: var(--ash-light);
     font-size: 0.82rem;
+}
+.changelog-entries a {
+    color: var(--rust);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.changelog-entries a:hover {
+    color: var(--parchment);
 }
 .changelog-entries ul {
     list-style: none;

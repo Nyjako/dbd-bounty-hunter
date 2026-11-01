@@ -1,4 +1,14 @@
-# DBD 10.3.0-PTB Art the Clown | Big update
+# DBD 10.3.0-PTB Art the Clown | Fix
+
+* Single Killer mode no longer asks you to pick a tierlist — it never climbs a ladder, so the choice was meaningless there.
+* Save verification now also replays perk slots, add-on slots, and the current killer from the action log, not just points and kills — editing any of those directly without a matching log entry now correctly shows up as a mismatch instead of being silently accepted as valid.
+* Added a Back button to the run setup steps, so a wrong choice doesn't mean starting over.
+* The tierlist preview's killer list no longer wraps mid-name — each killer is now its own tag instead of one long line of text.
+* Links in the changelog (wiki, GitHub) are now clickable instead of plain text.
+* Opening a second tierlist preview no longer leaves the first one stacked below it — only one preview shows at a time.
+* A PTB perk equipped in a slot now shows a same-tier stand-in while PTB is toggled off, instead of staying displayed as content that's no longer active. Turning PTB back on without buying anything new for that slot brings the real perk back — toggling it off and on never actually changes what's equipped. That stand-in is now rolled randomly once and saved, so it stays the same across reloads and repeated toggling instead of changing every time.
+
+# DBD 10.3.0-PTB Art the Clown
 
 ## Added
 

@@ -45,6 +45,20 @@ import changelogRaw from "../../Changelogs.md?raw";
         return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
+    // Runs on already-escaped text, so it's safe to turn bare URLs into
+    // real links without reopening the door to injected markup.
+    function linkify(html: string): string {
+        return html.replace(/https?:\/\/[^\s<]+/g, (url) => {
+            const trailing = url.match(/[.,;:)]+$/)?.[0] ?? "";
+            const clean = trailing ? url.slice(0, -trailing.length) : url;
+            return `<a href="${clean}" target="_blank" rel="noopener noreferrer">${clean}</a>${trailing}`;
+        });
+    }
+
+    function renderText(s: string): string {
+        return linkify(escapeHtml(s));
+    }
+
     function renderEntryBody(lines: string[]): string {
         let html = "";
         let inList = false;
@@ -74,13 +88,13 @@ import changelogRaw from "../../Changelogs.md?raw";
                     html += "<ul>";
                     inList = true;
                 }
-                html += `<li>${escapeHtml(line.replace(/^[*-]\s+/, ""))}</li>`;
+                html += `<li>${renderText(line.replace(/^[*-]\s+/, ""))}</li>`;
             } else if (/^`.*`$/.test(line)) {
                 closeList();
-                html += `<p class="changelog-note">${escapeHtml(line.slice(1, -1))}</p>`;
+                html += `<p class="changelog-note">${renderText(line.slice(1, -1))}</p>`;
             } else {
                 closeList();
-                html += `<p>${escapeHtml(line)}</p>`;
+                html += `<p>${renderText(line)}</p>`;
             }
         }
         closeList();

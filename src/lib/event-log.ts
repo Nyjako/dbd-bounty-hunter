@@ -5,9 +5,10 @@
 //
 //  1. Chain integrity: each entry's hash folds in every entry before it,
 //     so editing or deleting a line anywhere breaks every hash after it.
-//  2. State replay: kills, undos, purchases, and the Main Bounty all carry
-//     their point delta inline, so replaying the whole log should land
-//     on exactly the save's current points and kill counts. Any edit made
+//  2. State replay: kills, undos, purchases, perk/add-on/killer changes,
+//     and the Main Bounty all carry enough detail inline that replaying
+//     the whole log should land on exactly the save's current points,
+//     kill counts, perk slots, add-on slots, and killer. Any edit made
 //     directly to the state (god mode included) without a matching log
 //     entry shows up as a mismatch here, without needing a separate
 //     "god mode was used" flag.
@@ -62,18 +63,46 @@ export function verifyChain(eventLog: string[], expectedHash: string): boolean {
     return hash === expectedHash;
 }
 
+export interface PerkSlotState {
+    name: string;
+    tier: string;
+}
+
+// Points and kill counts replay as additive deltas (K/U/B/P/A/Y/R each
+// carry their own +/- amount). Perk slots, add-on slots, and the current
+// killer don't — they're "set to X" operations (E/A/Y/R/M), so they
+// replay as sparse overrides: only the indices/fields actually touched by
+// the log are present here, and verifyRun applies them on top of the
+// save's baseline snapshot.
 export interface ReplayResult {
     points: number;
     wantedCards: Record<string, number>;
+    perkSlotChanges: Record<number, PerkSlotState | null>;
+    addonSlotChanges: Record<number, number>;
+    killerNameChange: string | null;
 }
 
-// Replays the log's effect on points and kill counts, starting from
-// zero. Callers add this on top of a save's logBaseline (captured once,
-// at the point the log started tracking that save) to get the full
-// expected state.
+// A full snapshot of the state the log's replay builds on top of —
+// captured once, the moment a save is first seen with an empty event log
+// (see logBaseline in stores/points.ts).
+export interface GameStateSnapshot {
+    points: number;
+    wantedCards: Record<string, number>;
+    perkSlots: (PerkSlotState | null)[];
+    addonSlots: number[];
+    killerName: string;
+}
+
+const ADDON_TIER_NAMES = ["None", "Brown", "Green", "Blue", "Purple", "Iridescent"];
+
+// Replays the log's effect on points, kill counts, perk/add-on slots, and
+// the current killer, starting from a no-op baseline.
 export function replayEventLog(eventLog: string[]): ReplayResult {
     let points = 0;
     const wantedCards: Record<string, number> = {};
+    const perkSlotChanges: Record<number, PerkSlotState | null> = {};
+    const addonSlotChanges: Record<number, number> = {};
+    let killerNameChange: string | null = null;
 
     for (const line of eventLog) {
         const parts = line.split(":");
@@ -104,23 +133,42 @@ export function replayEventLog(eventLog: string[]): ReplayResult {
                 points -= cost;
                 break;
             }
+            case "E": {
+                const [, slotIndexStr, name, tier] = parts;
+                const slotIndex = Number(slotIndexStr);
+                if (Number.isInteger(slotIndex)) perkSlotChanges[slotIndex] = { name, tier };
+                break;
+            }
             case "A": {
-                const cost = Number(parts[parts.length - 1]) || 0;
+                const [, slotIndexStr, tierName, costStr] = parts;
+                const cost = Number(costStr) || 0;
                 points -= cost;
+
+                const slotIndex = Number(slotIndexStr);
+                const tierIndex = ADDON_TIER_NAMES.indexOf(tierName);
+                if (Number.isInteger(slotIndex) && tierIndex >= 0) addonSlotChanges[slotIndex] = tierIndex;
                 break;
             }
             case "Y":
             case "R": {
-                const cost = Number(parts[parts.length - 1]) || 0;
-                points -= cost;
+                const [, newKillerName, costStr] = parts;
+                points -= Number(costStr) || 0;
+                killerNameChange = newKillerName;
+                break;
+            }
+            case "M": {
+                // Trailing field has always been the killer name, through
+                // every format this line has been written in.
+                const killerFromMode = parts[parts.length - 1];
+                if (killerFromMode) killerNameChange = killerFromMode;
                 break;
             }
             default:
-                break; // E, M, I, L don't move points or kill counts
+                break; // I, L don't move state on their own
         }
     }
 
-    return { points, wantedCards };
+    return { points, wantedCards, perkSlotChanges, addonSlotChanges, killerNameChange };
 }
 
 export interface VerifyResult {
@@ -142,9 +190,8 @@ export const TRUST_LEGACY_BASELINE = true;
 export function verifyRun(
     eventLog: string[],
     logHash: string,
-    baseline: ReplayResult,
-    actualPoints: number,
-    actualWantedCards: Record<string, number>,
+    baseline: GameStateSnapshot,
+    actual: GameStateSnapshot,
 ): VerifyResult {
     const chainValid = verifyChain(eventLog, logHash);
     const hasLegacyBaseline = eventLog.some((line) => line.startsWith("L:"));
@@ -158,10 +205,38 @@ export function verifyRun(
     }
 
     const wantedCardsMatch =
-        Object.keys(expectedWantedCards).length === Object.keys(actualWantedCards).length &&
-        Object.entries(expectedWantedCards).every(([name, count]) => (actualWantedCards[name] ?? 0) === count);
+        Object.keys(expectedWantedCards).length === Object.keys(actual.wantedCards).length &&
+        Object.entries(expectedWantedCards).every(([name, count]) => (actual.wantedCards[name] ?? 0) === count);
 
-    const arithmeticMatches = expectedPoints === actualPoints && wantedCardsMatch;
+    const expectedPerkSlots = [...baseline.perkSlots];
+    for (const [indexStr, value] of Object.entries(replayed.perkSlotChanges)) {
+        expectedPerkSlots[Number(indexStr)] = value;
+    }
+    const perkSlotsMatch =
+        expectedPerkSlots.length === actual.perkSlots.length &&
+        expectedPerkSlots.every((expected, i) => {
+            const got = actual.perkSlots[i];
+            if (!expected || !got) return expected === got || (!expected && !got);
+            return expected.name === got.name && expected.tier === got.tier;
+        });
+
+    const expectedAddonSlots = [...baseline.addonSlots];
+    for (const [indexStr, value] of Object.entries(replayed.addonSlotChanges)) {
+        expectedAddonSlots[Number(indexStr)] = value;
+    }
+    const addonSlotsMatch =
+        expectedAddonSlots.length === actual.addonSlots.length &&
+        expectedAddonSlots.every((expected, i) => expected === actual.addonSlots[i]);
+
+    const expectedKillerName = replayed.killerNameChange ?? baseline.killerName;
+    const killerMatches = expectedKillerName === actual.killerName;
+
+    const arithmeticMatches =
+        expectedPoints === actual.points &&
+        wantedCardsMatch &&
+        perkSlotsMatch &&
+        addonSlotsMatch &&
+        killerMatches;
 
     return {
         chainValid,

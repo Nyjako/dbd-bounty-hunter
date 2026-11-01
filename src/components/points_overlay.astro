@@ -102,6 +102,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
         exportSave,
         importSave,
         getCurrentKiller,
+        getDisplayPerkSlots,
         setPtbActive,
         PERK_TIER_UNLOCK_COUNT,
         ADDON_TIERS,
@@ -273,7 +274,7 @@ const addonItem = inventory.find((item) => item.category === "add-on");
                 }
             }
 
-            grid.innerHTML = state.perkSlots
+            grid.innerHTML = getDisplayPerkSlots(state)
                 .map((slot, index) => {
                     const iconSrc = slot ? getPerkIcon(slot.name)?.src : null;
                     const content = slot

@@ -362,6 +362,10 @@ export function getAllPerks(ptbActive: boolean): { name: string; tier: PerkTierK
     return PERK_TIER_KEYS.flatMap((tier) => getPerkPool(tier, ptbActive).map((name) => ({ name, tier })));
 }
 
+export function isPtbPerk(name: string): boolean {
+    return PERKS_TIERS.PTB_INJECT.some((entry) => entry.data === name);
+}
+
 export const KILLER_TIERS = {
     ALEX_TIERLIST: {
         S: [
